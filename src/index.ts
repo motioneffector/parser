@@ -3,7 +3,7 @@
  * Text adventure command parser for natural language game input
  */
 
-// Placeholder exports - will be updated as implementation progresses
+export { createParser } from './parser'
 export { ValidationError, ParseError, ParserError } from './errors'
 export type {
   VerbPattern,
