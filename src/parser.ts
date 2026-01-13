@@ -16,7 +16,6 @@ import type {
   Token,
   EntityRef,
   Command,
-  ResolvedEntity,
 } from './types'
 
 /**
@@ -39,7 +38,7 @@ import type {
  */
 export function createParser(options: ParserOptions): Parser {
   // Validate options
-  if (!options.resolver || typeof options.resolver !== 'function') {
+  if (typeof options.resolver !== 'function') {
     throw new ValidationError('Resolver must be a function', 'resolver')
   }
 
@@ -116,12 +115,18 @@ export function createParser(options: ParserOptions): Parser {
     let noun: string | null = null
 
     // Skip articles
-    while (index < tokens.length && isArticle(tokens[index]!.value)) {
-      index++
+    while (index < tokens.length) {
+      const token = tokens[index]
+      if (token && isArticle(token.value)) {
+        index++
+      } else {
+        break
+      }
     }
 
     // Check for pronoun "it"
-    if (index < tokens.length && tokens[index]!.value === 'it') {
+    const currentToken = tokens[index]
+    if (currentToken?.value === 'it') {
       if (lastReferent) {
         return { entity: lastReferent, consumed: index - startIndex + 1 }
       } else {
@@ -131,7 +136,7 @@ export function createParser(options: ParserOptions): Parser {
           error: {
             type: 'parse_error',
             message: 'Cannot use "it" without a previous referent',
-            position: tokens[index]!.start,
+            position: currentToken.start,
           },
         }
       }
@@ -139,13 +144,12 @@ export function createParser(options: ParserOptions): Parser {
 
     // Collect words until we hit a preposition or end
     const words: string[] = []
-    while (
-      index < tokens.length &&
-      !isPreposition(tokens[index]!.value) &&
-      !findDirection(tokens[index]!.value)
-    ) {
-      if (!isArticle(tokens[index]!.value)) {
-        words.push(tokens[index]!.value)
+    while (index < tokens.length) {
+      const token = tokens[index]
+      if (!token) break
+      if (isPreposition(token.value) || findDirection(token.value)) break
+      if (!isArticle(token.value)) {
+        words.push(token.value)
       }
       index++
     }
@@ -155,7 +159,11 @@ export function createParser(options: ParserOptions): Parser {
     }
 
     // Last word is the noun, rest are adjectives
-    noun = words[words.length - 1]!
+    const lastWord = words[words.length - 1]
+    if (!lastWord) {
+      return { entity: null, consumed: 0 }
+    }
+    noun = lastWord
     if (words.length > 1) {
       adjectives.push(...words.slice(0, -1))
     }
@@ -164,13 +172,14 @@ export function createParser(options: ParserOptions): Parser {
     const entities = options.resolver(noun, adjectives, scope ?? {})
 
     if (entities.length === 0) {
+      const startToken = tokens[startIndex]
       return {
         entity: null,
         consumed: index - startIndex,
         error: {
           type: 'unknown_noun',
           noun,
-          position: tokens[startIndex]!.start,
+          position: startToken ? startToken.start : 0,
         },
       }
     }
@@ -188,8 +197,13 @@ export function createParser(options: ParserOptions): Parser {
       }
     }
 
+    const firstEntity = entities[0]
+    if (!firstEntity) {
+      return { entity: null, consumed: 0 }
+    }
+
     const entityRef: EntityRef = {
-      id: entities[0]!.id,
+      id: firstEntity.id,
       noun,
       adjectives,
     }
@@ -222,7 +236,16 @@ export function createParser(options: ParserOptions): Parser {
     }
 
     // Check if first token is a direction
-    const direction = findDirection(tokens[0]!.value)
+    const firstToken = tokens[0]
+    if (!firstToken) {
+      return {
+        type: 'parse_error',
+        message: 'Empty input',
+        position: 0,
+      }
+    }
+
+    const direction = findDirection(firstToken.value)
     if (direction) {
       const command: Command = {
         verb: 'GO',
@@ -233,11 +256,11 @@ export function createParser(options: ParserOptions): Parser {
     }
 
     // Check if first token is a verb
-    const verb = findVerb(tokens[0]!.value)
+    const verb = findVerb(firstToken.value)
     if (!verb) {
       return {
         type: 'unknown_verb',
-        verb: tokens[0]!.value,
+        verb: firstToken.value,
       }
     }
 
@@ -255,19 +278,29 @@ export function createParser(options: ParserOptions): Parser {
     if (verb.pattern === 'direction') {
       // Expects a direction
       if (tokens.length < 2) {
+        const lastToken = tokens[tokens.length - 1]
         return {
           type: 'parse_error',
           message: `Expected direction after "${verb.canonical}"`,
-          position: tokens[tokens.length - 1]!.end,
+          position: lastToken ? lastToken.end : 0,
         }
       }
 
-      const dir = findDirection(tokens[1]!.value)
+      const secondToken = tokens[1]
+      if (!secondToken) {
+        return {
+          type: 'parse_error',
+          message: `Expected direction after "${verb.canonical}"`,
+          position: 0,
+        }
+      }
+
+      const dir = findDirection(secondToken.value)
       if (!dir) {
         return {
           type: 'parse_error',
-          message: `Expected direction, got "${tokens[1]!.value}"`,
-          position: tokens[1]!.start,
+          message: `Expected direction, got "${secondToken.value}"`,
+          position: secondToken.start,
         }
       }
 
@@ -278,15 +311,25 @@ export function createParser(options: ParserOptions): Parser {
     if (verb.pattern === 'text') {
       // Rest of input is text
       if (tokens.length < 2) {
+        const lastToken = tokens[tokens.length - 1]
         return {
           type: 'parse_error',
           message: `Expected text after "${verb.canonical}"`,
-          position: tokens[tokens.length - 1]!.end,
+          position: lastToken ? lastToken.end : 0,
+        }
+      }
+
+      const secondToken = tokens[1]
+      if (!secondToken) {
+        return {
+          type: 'parse_error',
+          message: `Expected text after "${verb.canonical}"`,
+          position: 0,
         }
       }
 
       // Reconstruct text from original input
-      const textStart = tokens[1]!.start
+      const textStart = secondToken.start
       command.text = raw.slice(textStart).trim()
       return { type: 'command', command }
     }
@@ -295,10 +338,11 @@ export function createParser(options: ParserOptions): Parser {
       // Expects a subject (noun phrase)
       // But may also have optional preposition + object (e.g., "hit barrel with hammer")
       if (tokens.length < 2) {
+        const lastToken = tokens[tokens.length - 1]
         return {
           type: 'parse_error',
           message: `Expected object after "${verb.canonical}"`,
-          position: tokens[tokens.length - 1]!.end,
+          position: lastToken ? lastToken.end : 0,
         }
       }
 
@@ -307,10 +351,11 @@ export function createParser(options: ParserOptions): Parser {
         return error
       }
       if (!entity) {
+        const secondToken = tokens[1]
         return {
           type: 'parse_error',
           message: `Expected object after "${verb.canonical}"`,
-          position: tokens[1]!.start,
+          position: secondToken ? secondToken.start : 0,
         }
       }
 
@@ -334,7 +379,6 @@ export function createParser(options: ParserOptions): Parser {
 
           const {
             entity: object,
-            consumed: objectConsumed,
             error: objectError,
           } = parseEntity(tokens, nextIndex + 1, scope)
           if (objectError) {
@@ -344,10 +388,11 @@ export function createParser(options: ParserOptions): Parser {
             return objectError
           }
           if (!object) {
+            const targetToken = tokens[nextIndex + 1]
             return {
               type: 'parse_error',
               message: `Expected target after "${prepToken.value}"`,
-              position: tokens[nextIndex + 1]!.start,
+              position: targetToken ? targetToken.start : 0,
             }
           }
 
@@ -359,13 +404,15 @@ export function createParser(options: ParserOptions): Parser {
       return { type: 'command', command }
     }
 
-    if (verb.pattern === 'subject_object') {
-      // Expects subject + preposition + object
+    // verb.pattern === 'subject_object'
+    // Expects subject + preposition + object
+    {
       if (tokens.length < 2) {
+        const lastToken = tokens[tokens.length - 1]
         return {
           type: 'parse_error',
           message: `Expected object after "${verb.canonical}"`,
-          position: tokens[tokens.length - 1]!.end,
+          position: lastToken ? lastToken.end : 0,
         }
       }
 
@@ -379,10 +426,11 @@ export function createParser(options: ParserOptions): Parser {
         return subjectError
       }
       if (!subject) {
+        const secondToken = tokens[1]
         return {
           type: 'parse_error',
           message: `Expected object after "${verb.canonical}"`,
-          position: tokens[1]!.start,
+          position: secondToken ? secondToken.start : 0,
         }
       }
 
@@ -391,19 +439,21 @@ export function createParser(options: ParserOptions): Parser {
 
       // Look for preposition
       if (nextIndex >= tokens.length) {
+        const lastToken = tokens[tokens.length - 1]
         return {
           type: 'parse_error',
           message: `Expected preposition and target`,
-          position: tokens[tokens.length - 1]!.end,
+          position: lastToken ? lastToken.end : 0,
         }
       }
 
       const prepToken = tokens[nextIndex]
       if (!prepToken || !isPreposition(prepToken.value)) {
+        const lastToken = tokens[tokens.length - 1]
         return {
           type: 'parse_error',
           message: `Expected preposition, got "${prepToken?.value ?? 'nothing'}"`,
-          position: prepToken?.start ?? tokens[tokens.length - 1]!.end,
+          position: prepToken?.start ?? (lastToken ? lastToken.end : 0),
         }
       }
 
@@ -420,7 +470,6 @@ export function createParser(options: ParserOptions): Parser {
 
       const {
         entity: object,
-        consumed: objectConsumed,
         error: objectError,
       } = parseEntity(tokens, nextIndex + 1, scope)
       if (objectError) {
@@ -431,10 +480,11 @@ export function createParser(options: ParserOptions): Parser {
         return objectError
       }
       if (!object) {
+        const targetToken = tokens[nextIndex + 1]
         return {
           type: 'parse_error',
           message: `Expected target after "${prepToken.value}"`,
-          position: tokens[nextIndex + 1]!.start,
+          position: targetToken ? targetToken.start : 0,
         }
       }
 

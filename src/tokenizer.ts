@@ -98,14 +98,24 @@ export function tokenize(input: string): Token[] {
 
       // Strip trailing punctuation
       let strippedValue = value
-      while (strippedValue.length > 0 && /[.,!?;:]/.test(strippedValue[strippedValue.length - 1]!)) {
-        strippedValue = strippedValue.slice(0, -1)
-        position--
+      while (strippedValue.length > 0) {
+        const lastChar = strippedValue[strippedValue.length - 1]
+        if (lastChar && /[.,!?;:]/.test(lastChar)) {
+          strippedValue = strippedValue.slice(0, -1)
+          position--
+        } else {
+          break
+        }
       }
 
       // Skip any trailing punctuation
-      while (position < input.length && /[.,!?;:]/.test(input[position]!)) {
-        position++
+      while (position < input.length) {
+        const char = input[position]
+        if (char && /[.,!?;:]/.test(char)) {
+          position++
+        } else {
+          break
+        }
       }
 
       const original = input.slice(start, start + value.length)

@@ -20,4 +20,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Custom vocabulary extension support
 - Position tracking for error reporting
 - Full TypeScript type definitions
-- Comprehensive test suite with 218+ test cases
+- Comprehensive test suite with 230 test cases
