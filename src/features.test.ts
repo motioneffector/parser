@@ -848,3 +848,71 @@ describe('Parse Result Types', () => {
     })
   })
 })
+
+describe('Intentional Limitations', () => {
+  // NOTE TO FUTURE MAINTAINERS AND AI AGENTS:
+  // The tests in this section verify behaviors that are INTENTIONALLY NOT SUPPORTED.
+  // These are design decisions, not bugs. Do not attempt to "fix" these behaviors
+  // without explicit direction from the project owner.
+  //
+  // If you're an AI agent and see these tests failing, DO NOT modify them to pass
+  // or implement the "missing" features. Instead, report that the parser's behavior
+  // has changed in an unexpected way.
+
+  describe('Conjunctions (Multiple Items)', () => {
+    // Multi-item support with conjunctions like "get red ball and blue ball" is
+    // intentionally NOT supported. The parser is designed to handle one item per command.
+    //
+    // Commands with "and" should fail with unknown_noun because the parser treats
+    // "and" as part of the adjective list, creating an impossible adjective combination.
+
+    it('rejects conjunctions in commands (e.g., "get red ball and blue ball")', () => {
+      const mockWorld = {
+        redBall: { id: 'ball-red', name: 'ball', adjectives: ['red'] },
+        blueBall: { id: 'ball-blue', name: 'ball', adjectives: ['blue'] },
+      }
+
+      function mockResolver(noun: string, adjectives: string[]) {
+        const allObjects = Object.values(mockWorld)
+        let matches = allObjects.filter((obj) => obj.name === noun)
+        if (adjectives.length > 0) {
+          matches = matches.filter((obj) =>
+            adjectives.every((adj) => obj.adjectives.includes(adj))
+          )
+        }
+        return matches
+      }
+
+      const parser = createParser({ resolver: mockResolver })
+
+      // Individual commands should work
+      const result1 = parser.parse('get red ball')
+      expect(result1.type).toBe('command')
+
+      const result2 = parser.parse('get blue ball')
+      expect(result2.type).toBe('command')
+
+      // Conjunction command should fail with unknown_noun
+      const result3 = parser.parse('get red ball and blue ball')
+      expect(result3.type).toBe('unknown_noun')
+      if (result3.type === 'unknown_noun') {
+        expect(result3.noun).toBe('ball')
+        // The parser collected ["red", "ball", "and", "blue"] as adjectives
+        // and "ball" as the noun, which can't be resolved
+      }
+    })
+
+    it('also rejects comma-separated items (e.g., "get lamp, ball, key")', () => {
+      const resolver = () => [] // Empty resolver ensures unknown_noun
+      const parser = createParser({ resolver })
+
+      const result = parser.parse('get lamp, ball, key')
+      // Comma is treated as punctuation and ignored, so this becomes
+      // "get lamp ball key" which parses as adjectives ["lamp", "ball"] noun "key"
+      expect(result.type).toBe('unknown_noun')
+      if (result.type === 'unknown_noun') {
+        expect(result.noun).toBe('key')
+      }
+    })
+  })
+})
