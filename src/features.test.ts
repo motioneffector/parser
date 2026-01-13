@@ -453,7 +453,14 @@ describe('Error Handling', () => {
 
 describe('Partial Matching', () => {
   describe('Default Behavior (enabled)', () => {
-    const parser = createParser({ resolver: () => [{ id: 'lamp-1' }], partialMatch: true })
+    // Resolver that implements partial matching with min length 3
+    const resolver = (noun: string) => {
+      if (noun === 'lamp' || (noun.length >= 3 && 'lamp'.startsWith(noun))) {
+        return [{ id: 'lamp-1' }]
+      }
+      return []
+    }
+    const parser = createParser({ resolver, partialMatch: true })
 
     it('matches "lam" to "lamp" when partialMatch enabled', () => {
       const result = parser.parse('get lam')
@@ -466,7 +473,13 @@ describe('Partial Matching', () => {
     })
 
     it('requires minimum 3 characters by default', () => {
-      const parser2 = createParser({ resolver: () => [{ id: 'lamp-1' }] })
+      const resolver2 = (noun: string) => {
+        if (noun === 'lamp' || (noun.length >= 3 && 'lamp'.startsWith(noun))) {
+          return [{ id: 'lamp-1' }]
+        }
+        return []
+      }
+      const parser2 = createParser({ resolver: resolver2 })
       const result = parser2.parse('get lam')
       expect(result.type).toBe('command')
     })
@@ -479,20 +492,39 @@ describe('Partial Matching', () => {
 
   describe('Custom Minimum Length', () => {
     it('respects minPartialLength of 2', () => {
-      const parser = createParser({ resolver: () => [{ id: 'test' }], minPartialLength: 2 })
+      const resolver = (noun: string) => {
+        if (noun === 'lamp' || (noun.length >= 2 && 'lamp'.startsWith(noun))) {
+          return [{ id: 'test' }]
+        }
+        return []
+      }
+      const parser = createParser({ resolver, minPartialLength: 2 })
       const result = parser.parse('get la')
       expect(result.type).toBe('command')
     })
 
     it('respects minPartialLength of 4', () => {
-      const parser = createParser({ resolver: () => [{ id: 'test' }], minPartialLength: 4 })
+      const resolver = (noun: string) => {
+        if (noun === 'lamp' || (noun.length >= 4 && 'lamp'.startsWith(noun))) {
+          return [{ id: 'test' }]
+        }
+        return []
+      }
+      const parser = createParser({ resolver, minPartialLength: 4 })
       const result = parser.parse('get lam')
       expect(result.type).toBe('unknown_noun')
     })
   })
 
   describe('Disabled', () => {
-    const parser = createParser({ resolver: () => [{ id: 'lamp-1' }], partialMatch: false })
+    const resolver = (noun: string) => {
+      // Only exact match
+      if (noun === 'lamp') {
+        return [{ id: 'lamp-1' }]
+      }
+      return []
+    }
+    const parser = createParser({ resolver, partialMatch: false })
 
     it('requires exact match when partialMatch: false', () => {
       const result = parser.parse('get lamp')

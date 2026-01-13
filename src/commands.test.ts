@@ -18,6 +18,10 @@ const mockResolver = (
     coin: { id: 'coin-1' },
     merchant: { id: 'merchant-1' },
     chest: { id: 'chest-1' },
+    ladder: { id: 'ladder-1' },
+    book: { id: 'book-1' },
+    troll: { id: 'troll-1' },
+    quest: { id: 'quest-1' },
   }
 
   if (adjectives.length > 0 && adjectives.includes('red') && noun === 'ball') {

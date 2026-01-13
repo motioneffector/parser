@@ -25,6 +25,7 @@ export const DEFAULT_VOCABULARY: Vocabulary = {
     { canonical: 'CLOSE', synonyms: ['close'], pattern: 'subject' },
     { canonical: 'LOCK', synonyms: ['lock'], pattern: 'subject' },
     { canonical: 'UNLOCK', synonyms: ['unlock'], pattern: 'subject' },
+    // Note: verbs can have flexible patterns - parser tries subject_object first, then subject
 
     // Examination
     { canonical: 'LOOK', synonyms: ['look', 'l'], pattern: 'none' },

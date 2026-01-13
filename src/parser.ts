@@ -293,6 +293,7 @@ export function createParser(options: ParserOptions): Parser {
 
     if (verb.pattern === 'subject') {
       // Expects a subject (noun phrase)
+      // But may also have optional preposition + object (e.g., "hit barrel with hammer")
       if (tokens.length < 2) {
         return {
           type: 'parse_error',
@@ -314,6 +315,46 @@ export function createParser(options: ParserOptions): Parser {
       }
 
       command.subject = entity
+      const nextIndex = 1 + consumed
+
+      // Check if there's a preposition following (optional object)
+      if (nextIndex < tokens.length) {
+        const prepToken = tokens[nextIndex]
+        if (prepToken && isPreposition(prepToken.value)) {
+          // Parse as subject_object pattern
+          command.preposition = prepToken.value
+
+          if (nextIndex + 1 >= tokens.length) {
+            return {
+              type: 'parse_error',
+              message: `Expected target after "${prepToken.value}"`,
+              position: prepToken.end,
+            }
+          }
+
+          const {
+            entity: object,
+            consumed: objectConsumed,
+            error: objectError,
+          } = parseEntity(tokens, nextIndex + 1, scope)
+          if (objectError) {
+            if (objectError.type === 'ambiguous') {
+              return { ...objectError, role: 'object' }
+            }
+            return objectError
+          }
+          if (!object) {
+            return {
+              type: 'parse_error',
+              message: `Expected target after "${prepToken.value}"`,
+              position: tokens[nextIndex + 1]!.start,
+            }
+          }
+
+          command.object = object
+        }
+      }
+
       lastReferent = entity
       return { type: 'command', command }
     }

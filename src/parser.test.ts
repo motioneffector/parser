@@ -115,8 +115,8 @@ describe('createParser()', () => {
 
     it('respects custom minPartialLength value', () => {
       const parser = createParser({ resolver: mockResolver, minPartialLength: 2 })
-      const result = parser.parse('la') // Now long enough
-      // "la" should match "look"
+      const result = parser.parse('lo') // Now long enough
+      // "lo" should match "look"
       expect(result.type).not.toBe('unknown_verb')
     })
   })
