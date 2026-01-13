@@ -17,10 +17,14 @@ describe('Vocabulary System', () => {
     it('recognizes verbs from default vocabulary', () => {
       const result = parser.parse('look')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('LOOK')
+      }
     })
 
     it('maps synonyms to canonical form', () => {
       const result = parser.parse('get lamp')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.verb).toBe('GET')
       }
@@ -28,6 +32,7 @@ describe('Vocabulary System', () => {
 
     it('returns canonical form in uppercase', () => {
       const result = parser.parse('examine lamp')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.verb).toBe('EXAMINE')
       }
@@ -82,6 +87,10 @@ describe('Vocabulary System', () => {
       const result2 = parser.parse('u')
       expect(result1.type).toBe('command')
       expect(result2.type).toBe('command')
+      if (result1.type === 'command' && result2.type === 'command') {
+        expect(result1.command.direction).toBe('UP')
+        expect(result2.command.direction).toBe('UP')
+      }
     })
 
     it('recognizes special directions (in, out)', () => {
@@ -89,10 +98,15 @@ describe('Vocabulary System', () => {
       const result2 = parser.parse('out')
       expect(result1.type).toBe('command')
       expect(result2.type).toBe('command')
+      if (result1.type === 'command' && result2.type === 'command') {
+        expect(result1.command.direction).toBe('IN')
+        expect(result2.command.direction).toBe('OUT')
+      }
     })
 
     it('returns canonical direction name', () => {
       const result = parser.parse('n')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.direction).toBe('NORTH')
       }
@@ -119,15 +133,23 @@ describe('Vocabulary System', () => {
 
     it('strips articles from object references', () => {
       const result = parser.parse('get the lamp')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.subject?.noun).toBe('lamp')
       }
     })
 
     it('tracks that article was present', () => {
-      // Articles are stripped but their presence is noted
+      // Articles are stripped from the noun phrase
+      // The parser correctly handles input with articles
       const result = parser.parse('get the lamp')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        // Verify the article was stripped and the noun was correctly identified
+        expect(result.command.subject?.noun).toBe('lamp')
+        // The original raw input should contain the article
+        expect(result.command.raw).toContain('the')
+      }
     })
   })
 
@@ -136,6 +158,7 @@ describe('Vocabulary System', () => {
 
     it('recognizes "with" as preposition', () => {
       const result = parser.parse('hit barrel with hammer')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.preposition).toBe('with')
       }
@@ -143,6 +166,7 @@ describe('Vocabulary System', () => {
 
     it('recognizes "to" as preposition', () => {
       const result = parser.parse('give coin to merchant')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.preposition).toBe('to')
       }
@@ -150,6 +174,7 @@ describe('Vocabulary System', () => {
 
     it('recognizes "at" as preposition', () => {
       const result = parser.parse('throw rock at window')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.preposition).toBe('at')
       }
@@ -157,6 +182,7 @@ describe('Vocabulary System', () => {
 
     it('recognizes "in" as preposition', () => {
       const result = parser.parse('put key in box')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.preposition).toBe('in')
       }
@@ -164,6 +190,7 @@ describe('Vocabulary System', () => {
 
     it('recognizes "on" as preposition', () => {
       const result = parser.parse('put book on table')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.preposition).toBe('on')
       }
@@ -171,6 +198,7 @@ describe('Vocabulary System', () => {
 
     it('recognizes "from" as preposition', () => {
       const result = parser.parse('take key from chest')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.preposition).toBe('from')
       }
@@ -178,13 +206,15 @@ describe('Vocabulary System', () => {
 
     it('recognizes "into" as preposition', () => {
       const result = parser.parse('put coin into pouch')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.preposition).toBe('into')
       }
     })
 
     it('recognizes "onto" as preposition', () => {
-      const result = parser.parse('climb onto ledge')
+      const result = parser.parse('put box onto shelf')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.preposition).toBe('onto')
       }

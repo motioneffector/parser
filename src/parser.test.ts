@@ -105,6 +105,9 @@ describe('createParser()', () => {
       const result = parser.parse('exa lamp')
       // With partial match, "exa" should match "examine"
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('EXAMINE')
+      }
     })
 
     it('respects minPartialLength option (default 3)', () => {
@@ -115,9 +118,14 @@ describe('createParser()', () => {
 
     it('respects custom minPartialLength value', () => {
       const parser = createParser({ resolver: mockResolver, minPartialLength: 2 })
-      const result = parser.parse('lo') // Now long enough
-      // "lo" should match "look"
-      expect(result.type).not.toBe('unknown_verb')
+      const result = parser.parse('lo lamp') // Now long enough with subject for "lock"
+      // "lo" matches "lock" (first partial match) which requires a subject
+      expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        // "lo" partially matches "lock" (comes before "look" in vocab)
+        expect(result.command.verb).toBe('LOCK')
+        expect(result.command.subject).toBeDefined()
+      }
     })
   })
 })

@@ -68,13 +68,18 @@ describe('Tokenization', () => {
 
     it('handles unclosed quotes gracefully', () => {
       const tokens = tokenize('say "hello')
-      // Should either treat as unterminated or consume rest of string
-      expect(tokens.length).toBeGreaterThan(0)
+      // Should handle unclosed quote - consume rest as quoted string
+      expect(tokens).toHaveLength(2)
+      expect(tokens[0]!.value).toBe('say')
+      expect(tokens[0]!.type).toBe('WORD')
+      // The unclosed quote should result in capturing the remaining text
+      expect(tokens[1]!.value).toBe('hello')
+      expect(tokens[1]!.type).toBe('QUOTED_STRING')
     })
 
     it('preserves spaces within quoted strings', () => {
       const tokens = tokenize('say "hello   world"')
-      expect(tokens[1]!.value).toContain('   ')
+      expect(tokens[1]!.value).toBe('hello   world')
     })
   })
 

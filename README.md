@@ -2,6 +2,10 @@
 
 Text adventure command parser for natural language game input.
 
+[![npm version](https://img.shields.io/npm/v/@motioneffector/parser.svg)](https://www.npmjs.com/package/@motioneffector/parser)
+[![license](https://img.shields.io/npm/l/@motioneffector/parser.svg)](https://github.com/motioneffector/parser/blob/main/LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
+
 ## Installation
 
 ```bash
@@ -323,6 +327,14 @@ import type {
   DirectionDefinition
 } from '@motioneffector/parser'
 ```
+
+## Demo
+
+[Try the interactive demo](https://motioneffector.github.io/parser/index.html)
+
+## Browser Support
+
+Works in all modern browsers (ES2022+). For older browsers, use a transpiler.
 
 ## License
 

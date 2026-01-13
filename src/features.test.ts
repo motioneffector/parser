@@ -47,6 +47,9 @@ describe('Object Resolution', () => {
       const parser = createParser({ resolver })
       const result = parser.parse('get lamp')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.subject?.id).toBe('lamp-1')
+      }
     })
 
     it('handles resolver returning multiple entities', () => {
@@ -127,6 +130,7 @@ describe('Disambiguation', () => {
     it('includes all candidates in ambiguous result', () => {
       const parser = createParser({ resolver })
       const result = parser.parse('get ball')
+      expect(result.type).toBe('ambiguous')
       if (result.type === 'ambiguous') {
         expect(result.candidates).toHaveLength(2)
       }
@@ -135,8 +139,9 @@ describe('Disambiguation', () => {
     it('includes original input in ambiguous result', () => {
       const parser = createParser({ resolver })
       const result = parser.parse('get ball')
+      expect(result.type).toBe('ambiguous')
       if (result.type === 'ambiguous') {
-        expect(result.original).toBeTruthy()
+        expect(result.original).toBe('ball')
       }
     })
 
@@ -149,21 +154,39 @@ describe('Disambiguation', () => {
 
   describe('Resolution', () => {
     it('accepts disambiguation response with index', () => {
-      // This would be a follow-up feature - parser accepts clarification
-      // For now, just test that ambiguous results are properly formed
-      const resolver = () => [{ id: 'a' }, { id: 'b' }]
+      // Ambiguous results include indexed candidates that can be selected by index
+      const resolver = () => [{ id: 'item-a', name: 'first item' }, { id: 'item-b', name: 'second item' }]
       const parser = createParser({ resolver })
       const result = parser.parse('get item')
       expect(result.type).toBe('ambiguous')
+      if (result.type === 'ambiguous') {
+        // Candidates array has indices 0 and 1 that can be used for disambiguation
+        expect(result.candidates).toHaveLength(2)
+        expect(result.candidates[0]).toBeDefined()
+        expect(result.candidates[0]!.id).toBeDefined()
+        expect(result.candidates[1]).toBeDefined()
+        expect(result.candidates[1]!.id).toBeDefined()
+        // Verify indices are accessible
+        const firstCandidate = result.candidates[0]
+        const secondCandidate = result.candidates[1]
+        expect(firstCandidate?.id).toBe('item-a')
+        expect(secondCandidate?.id).toBe('item-b')
+      }
     })
 
     it('accepts disambiguation response with entity id', () => {
-      // Similar to above - testing structure
-      const resolver = () => [{ id: 'a' }, { id: 'b' }]
+      // Ambiguous results include entity ids that can be used for disambiguation
+      const resolver = () => [{ id: 'item-a', name: 'first item' }, { id: 'item-b', name: 'second item' }]
       const parser = createParser({ resolver })
       const result = parser.parse('get item')
+      expect(result.type).toBe('ambiguous')
       if (result.type === 'ambiguous') {
-        expect(result.candidates[0]!.id).toBeDefined()
+        // Each candidate has an id that can be used for disambiguation
+        expect(result.candidates[0]!.id).toBe('item-a')
+        expect(result.candidates[1]!.id).toBe('item-b')
+        // Verify id property is a string (usable for lookup)
+        expect(typeof result.candidates[0]!.id).toBe('string')
+        expect(typeof result.candidates[1]!.id).toBe('string')
       }
     })
   })
@@ -184,12 +207,16 @@ describe('Pronoun Handling', () => {
       parser.parse('get lamp')
       const result = parser.parse('examine it')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.subject?.id).toBe('lamp-1')
+      }
     })
 
     it('replaces "it" with last entity reference', () => {
       const parser = createParser({ resolver })
       parser.parse('get lamp')
       const result = parser.parse('examine it')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.subject?.id).toBe('lamp-1')
       }
@@ -200,6 +227,10 @@ describe('Pronoun Handling', () => {
       parser.parse('get lamp')
       const result = parser.parse('drop it')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('DROP')
+        expect(result.command.subject?.id).toBe('lamp-1')
+      }
     })
 
     it('"it" works as object', () => {
@@ -208,6 +239,11 @@ describe('Pronoun Handling', () => {
       const result = parser.parse('put box in it')
       // "it" should refer to lamp in the object position
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('PUT')
+        expect(result.command.subject?.id).toBe('box-1')
+        expect(result.command.object?.id).toBe('lamp-1')
+      }
     })
 
     it('returns error if "it" used with no referent', () => {
@@ -239,10 +275,15 @@ describe('Pronoun Handling', () => {
 describe('Custom Vocabulary', () => {
   describe('Adding Verbs', () => {
     it('addVerb() adds new verb definition', () => {
-      const parser = createParser({ resolver: () => [] })
+      const resolver = (noun: string) => noun === 'spell' ? [{ id: 'spell-1' }] : []
+      const parser = createParser({ resolver })
       parser.addVerb({ canonical: 'CAST', synonyms: ['cast', 'invoke'], pattern: 'subject' })
       const result = parser.parse('cast spell')
-      expect(result.type).not.toBe('unknown_verb')
+      // Should recognize the new verb and parse successfully
+      expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('CAST')
+      }
     })
 
     it('new verb is recognized in parsing', () => {
@@ -251,6 +292,10 @@ describe('Custom Vocabulary', () => {
       parser.addVerb({ canonical: 'CAST', synonyms: ['cast'], pattern: 'subject' })
       const result = parser.parse('cast spell')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('CAST')
+        expect(result.command.subject?.id).toBe('spell-1')
+      }
     })
 
     it('synonyms for new verb work correctly', () => {
@@ -261,6 +306,10 @@ describe('Custom Vocabulary', () => {
       const result2 = parser.parse('invoke spell')
       expect(result1.type).toBe('command')
       expect(result2.type).toBe('command')
+      if (result1.type === 'command' && result2.type === 'command') {
+        expect(result1.command.verb).toBe('CAST')
+        expect(result2.command.verb).toBe('CAST')
+      }
     })
 
     it('pattern for new verb is respected', () => {
@@ -269,6 +318,10 @@ describe('Custom Vocabulary', () => {
       parser.addVerb({ canonical: 'MEDITATE', synonyms: ['meditate'], pattern: 'none' })
       const result = parser.parse('meditate')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('MEDITATE')
+        expect(result.command.subject).toBeUndefined()
+      }
     })
   })
 
@@ -278,6 +331,9 @@ describe('Custom Vocabulary', () => {
       parser.addDirection({ canonical: 'PORTAL', aliases: ['portal', 'p'] })
       const result = parser.parse('portal')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.direction).toBe('PORTAL')
+      }
     })
 
     it('new direction is recognized in parsing', () => {
@@ -285,6 +341,9 @@ describe('Custom Vocabulary', () => {
       parser.addDirection({ canonical: 'WARP', aliases: ['warp'] })
       const result = parser.parse('warp')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.direction).toBe('WARP')
+      }
     })
 
     it('shortcut for new direction works', () => {
@@ -292,6 +351,9 @@ describe('Custom Vocabulary', () => {
       parser.addDirection({ canonical: 'PORTAL', aliases: ['portal', 'p'] })
       const result = parser.parse('p')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.direction).toBe('PORTAL')
+      }
     })
   })
 
@@ -309,6 +371,10 @@ describe('Custom Vocabulary', () => {
       const result2 = parser.parse('look')
       expect(result1.type).toBe('command')
       expect(result2.type).toBe('command')
+      if (result1.type === 'command' && result2.type === 'command') {
+        expect(result1.command.verb).toBe('CUSTOM')
+        expect(result2.command.verb).toBe('LOOK')
+      }
     })
 
     it('custom vocabulary replaces defaults when extend: false', () => {
@@ -342,6 +408,7 @@ describe('Error Handling', () => {
 
     it('includes the unknown verb string in result', () => {
       const result = parser.parse('xyzzy lamp')
+      expect(result.type).toBe('unknown_verb')
       if (result.type === 'unknown_verb') {
         expect(result.verb).toBe('xyzzy')
       }
@@ -363,6 +430,7 @@ describe('Error Handling', () => {
 
     it('includes the unknown noun string in result', () => {
       const result = parser.parse('get xyzzy')
+      expect(result.type).toBe('unknown_noun')
       if (result.type === 'unknown_noun') {
         expect(result.noun).toBe('xyzzy')
       }
@@ -370,6 +438,7 @@ describe('Error Handling', () => {
 
     it('includes position of unknown noun', () => {
       const result = parser.parse('get xyzzy')
+      expect(result.type).toBe('unknown_noun')
       if (result.type === 'unknown_noun') {
         expect(result.position).toBeGreaterThanOrEqual(0)
       }
@@ -396,13 +465,19 @@ describe('Error Handling', () => {
 
     it('includes helpful message in parse_error', () => {
       const result = parser.parse('get')
+      expect(result.type).toBe('parse_error')
       if (result.type === 'parse_error') {
         expect(result.message).toBeTruthy()
+        expect(typeof result.message).toBe('string')
+        expect(result.message.length).toBeGreaterThan(0)
+        // Should contain useful context about the error
+        expect(result.message).toMatch(/expected|object|after/i)
       }
     })
 
     it('includes position in parse_error', () => {
       const result = parser.parse('get')
+      expect(result.type).toBe('parse_error')
       if (result.type === 'parse_error') {
         expect(result.position).toBeGreaterThanOrEqual(0)
       }
@@ -424,29 +499,38 @@ describe('Error Handling', () => {
 
     it('handles single character input', () => {
       const result = parser.parse('x')
-      // 'x' is a valid verb (examine shortcut)
-      expect(result).toBeDefined()
+      // 'x' is a valid verb (examine shortcut) but needs a subject
+      // Since pattern is 'subject' and no subject is provided, it should be parse_error
+      expect(result.type).toBe('parse_error')
     })
 
     it('handles very long input', () => {
       const longInput = 'get ' + 'a '.repeat(100) + 'lamp'
       const result = parser.parse(longInput)
-      expect(result).toBeDefined()
+      // Should parse and return a result (articles are stripped, lamp is the noun)
+      // 'a' repeated is treated as articles which are stripped, leaving just 'lamp'
+      expect(result.type).toBe('unknown_noun')
+      if (result.type === 'unknown_noun') {
+        expect(result.noun).toBe('lamp')
+      }
     })
 
     it('handles unicode characters', () => {
       const result = parser.parse('get 日本語')
-      expect(result).toBeDefined()
+      // Should parse, but noun won't be found
+      expect(result.type).toBe('unknown_noun')
     })
 
     it('handles emoji', () => {
       const result = parser.parse('get 🔑')
-      expect(result).toBeDefined()
+      // Should parse, but emoji noun won't be found
+      expect(result.type).toBe('unknown_noun')
     })
 
     it('handles numbers in input', () => {
       const result = parser.parse('get key123')
-      expect(result).toBeDefined()
+      // Should parse the input, noun won't be found
+      expect(result.type).toBe('unknown_noun')
     })
   })
 })
@@ -465,11 +549,18 @@ describe('Partial Matching', () => {
     it('matches "lam" to "lamp" when partialMatch enabled', () => {
       const result = parser.parse('get lam')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('GET')
+        expect(result.command.subject?.id).toBe('lamp-1')
+      }
     })
 
     it('matches "exa" to "examine"', () => {
       const result = parser.parse('exa lamp')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('EXAMINE')
+      }
     })
 
     it('requires minimum 3 characters by default', () => {
@@ -482,6 +573,10 @@ describe('Partial Matching', () => {
       const parser2 = createParser({ resolver: resolver2 })
       const result = parser2.parse('get lam')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('GET')
+        expect(result.command.subject?.id).toBe('lamp-1')
+      }
     })
 
     it('"la" does not match "lamp" (too short)', () => {
@@ -494,13 +589,17 @@ describe('Partial Matching', () => {
     it('respects minPartialLength of 2', () => {
       const resolver = (noun: string) => {
         if (noun === 'lamp' || (noun.length >= 2 && 'lamp'.startsWith(noun))) {
-          return [{ id: 'test' }]
+          return [{ id: 'lamp-1' }]
         }
         return []
       }
       const parser = createParser({ resolver, minPartialLength: 2 })
       const result = parser.parse('get la')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('GET')
+        expect(result.command.subject?.id).toBe('lamp-1')
+      }
     })
 
     it('respects minPartialLength of 4', () => {
@@ -529,6 +628,10 @@ describe('Partial Matching', () => {
     it('requires exact match when partialMatch: false', () => {
       const result = parser.parse('get lamp')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('GET')
+        expect(result.command.subject?.id).toBe('lamp-1')
+      }
     })
 
     it('"lam" does not match "lamp" when disabled', () => {
@@ -539,17 +642,23 @@ describe('Partial Matching', () => {
 
   describe('Ambiguity', () => {
     it('returns ambiguous when partial matches multiple ("s" matches "sword" and "shield")', () => {
+      // Note: Can't use 's' directly as it conflicts with SOUTH direction
+      // Use 'sh' to simulate partial matching that returns multiple results
       const resolver = (noun: string) => {
-        if (noun === 's' || noun === 'sw' || noun === 'sh') {
-          return [{ id: 'sword' }, { id: 'shield' }]
+        if (noun === 'sh' || noun === 'sho' || noun === 'shi') {
+          return [{ id: 'sword', name: 'sword' }, { id: 'shield', name: 'shield' }]
         }
         return []
       }
-      const parser = createParser({ resolver, partialMatch: true, minPartialLength: 1 })
-      const result = parser.parse('get s')
-      // Partial matching at noun level is handled by resolver
-      // Parser handles verb partial matching
-      expect(result).toBeDefined()
+      const parser = createParser({ resolver, partialMatch: true, minPartialLength: 2 })
+      const result = parser.parse('get sh')
+      // Resolver returns multiple matches for partial 'sh', so result should be ambiguous
+      expect(result.type).toBe('ambiguous')
+      if (result.type === 'ambiguous') {
+        expect(result.candidates).toHaveLength(2)
+        expect(result.candidates[0]!.id).toBe('sword')
+        expect(result.candidates[1]!.id).toBe('shield')
+      }
     })
   })
 })
@@ -566,6 +675,7 @@ describe('Parse Result Types', () => {
 
     it('has verb property (uppercase canonical)', () => {
       const result = parser.parse('look')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.verb).toBe('LOOK')
         expect(result.command.verb).toBe(result.command.verb.toUpperCase())
@@ -574,20 +684,29 @@ describe('Parse Result Types', () => {
 
     it('has subject property when applicable', () => {
       const result = parser.parse('get lamp')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.subject).toBeDefined()
+        expect(result.command.subject?.id).toBe('test-1')
+        expect(result.command.subject?.noun).toBe('lamp')
+        expect(result.command.subject?.adjectives).toEqual([])
       }
     })
 
     it('has object property when applicable', () => {
       const result = parser.parse('put lamp in box')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.object).toBeDefined()
+        expect(result.command.object?.id).toBe('test-1')
+        expect(result.command.object?.noun).toBe('box')
+        expect(result.command.object?.adjectives).toEqual([])
       }
     })
 
     it('has preposition property when applicable', () => {
       const result = parser.parse('put lamp in box')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.preposition).toBe('in')
       }
@@ -595,14 +714,16 @@ describe('Parse Result Types', () => {
 
     it('has direction property when applicable', () => {
       const result = parser.parse('north')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
-        expect(result.command.direction).toBeDefined()
+        expect(result.command.direction).toBe('NORTH')
       }
     })
 
     it('has raw property with original input', () => {
       const input = 'get lamp'
       const result = parser.parse(input)
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.raw).toBe(input)
       }
@@ -612,6 +733,7 @@ describe('Parse Result Types', () => {
   describe('EntityRef Structure', () => {
     it('has id property from resolver', () => {
       const result = parser.parse('get lamp')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.subject?.id).toBe('test-1')
       }
@@ -619,6 +741,7 @@ describe('Parse Result Types', () => {
 
     it('has noun property with original noun used', () => {
       const result = parser.parse('get lamp')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.subject?.noun).toBe('lamp')
       }
@@ -626,9 +749,11 @@ describe('Parse Result Types', () => {
 
     it('has adjectives array', () => {
       const result = parser.parse('get red lamp')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.subject?.adjectives).toBeDefined()
         expect(Array.isArray(result.command.subject?.adjectives)).toBe(true)
+        expect(result.command.subject?.adjectives).toEqual(['red'])
       }
     })
   })
@@ -644,6 +769,7 @@ describe('Parse Result Types', () => {
 
     it('has candidates array', () => {
       const result = ambigParser.parse('get item')
+      expect(result.type).toBe('ambiguous')
       if (result.type === 'ambiguous') {
         expect(Array.isArray(result.candidates)).toBe(true)
       }
@@ -651,8 +777,9 @@ describe('Parse Result Types', () => {
 
     it('has original string', () => {
       const result = ambigParser.parse('get item')
+      expect(result.type).toBe('ambiguous')
       if (result.type === 'ambiguous') {
-        expect(result.original).toBeTruthy()
+        expect(result.original).toBe('item')
       }
     })
   })
@@ -665,6 +792,7 @@ describe('Parse Result Types', () => {
 
     it('has verb property', () => {
       const result = parser.parse('xyzzy')
+      expect(result.type).toBe('unknown_verb')
       if (result.type === 'unknown_verb') {
         expect(result.verb).toBe('xyzzy')
       }
@@ -682,6 +810,7 @@ describe('Parse Result Types', () => {
 
     it('has noun property', () => {
       const result = emptyParser.parse('get blerg')
+      expect(result.type).toBe('unknown_noun')
       if (result.type === 'unknown_noun') {
         expect(result.noun).toBe('blerg')
       }
@@ -689,6 +818,7 @@ describe('Parse Result Types', () => {
 
     it('has position property', () => {
       const result = emptyParser.parse('get blerg')
+      expect(result.type).toBe('unknown_noun')
       if (result.type === 'unknown_noun') {
         expect(typeof result.position).toBe('number')
       }
@@ -703,6 +833,7 @@ describe('Parse Result Types', () => {
 
     it('has message property', () => {
       const result = parser.parse('')
+      expect(result.type).toBe('parse_error')
       if (result.type === 'parse_error') {
         expect(typeof result.message).toBe('string')
       }
@@ -710,6 +841,7 @@ describe('Parse Result Types', () => {
 
     it('has position property', () => {
       const result = parser.parse('')
+      expect(result.type).toBe('parse_error')
       if (result.type === 'parse_error') {
         expect(typeof result.position).toBe('number')
       }

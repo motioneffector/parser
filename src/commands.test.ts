@@ -87,11 +87,21 @@ describe('Default Vocabulary', () => {
     it('recognizes "leave" with pattern none', () => {
       const result = parser.parse('leave')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        // "leave" is a synonym for EXIT, maps to canonical EXIT
+        expect(result.command.verb).toBe('EXIT')
+        // No subject needed (pattern: none)
+        expect(result.command.subject).toBeUndefined()
+      }
     })
 
     it('recognizes "climb" with pattern subject', () => {
       const result = parser.parse('climb ladder')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('CLIMB')
+        expect(result.command.subject).toBeDefined()
+      }
     })
   })
 
@@ -106,6 +116,7 @@ describe('Default Vocabulary', () => {
 
     it('recognizes "take" as synonym for get', () => {
       const result = parser.parse('take lamp')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.verb).toBe('GET')
       }
@@ -113,6 +124,7 @@ describe('Default Vocabulary', () => {
 
     it('recognizes "grab" as synonym for get', () => {
       const result = parser.parse('grab lamp')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.verb).toBe('GET')
       }
@@ -120,6 +132,7 @@ describe('Default Vocabulary', () => {
 
     it('recognizes "pick" as synonym for get', () => {
       const result = parser.parse('pick lamp')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.verb).toBe('GET')
       }
@@ -128,41 +141,76 @@ describe('Default Vocabulary', () => {
     it('recognizes "drop" with pattern subject', () => {
       const result = parser.parse('drop lamp')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('DROP')
+        expect(result.command.subject).toBeDefined()
+      }
     })
 
     it('recognizes "put" with pattern subject_object', () => {
       const result = parser.parse('put key in box')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('PUT')
+        expect(result.command.subject).toBeDefined()
+        expect(result.command.object).toBeDefined()
+      }
     })
 
     it('recognizes "give" with pattern subject_object', () => {
       const result = parser.parse('give coin to merchant')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('GIVE')
+        expect(result.command.subject).toBeDefined()
+        expect(result.command.object).toBeDefined()
+      }
     })
 
     it('recognizes "throw" with pattern subject_object', () => {
       const result = parser.parse('throw ball at door')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('THROW')
+        expect(result.command.subject).toBeDefined()
+        expect(result.command.object).toBeDefined()
+      }
     })
 
     it('recognizes "open" with pattern subject', () => {
       const result = parser.parse('open door')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('OPEN')
+        expect(result.command.subject).toBeDefined()
+      }
     })
 
     it('recognizes "close" with pattern subject', () => {
       const result = parser.parse('close door')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('CLOSE')
+        expect(result.command.subject).toBeDefined()
+      }
     })
 
     it('recognizes "lock" with pattern subject', () => {
       const result = parser.parse('lock door')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('LOCK')
+        expect(result.command.subject).toBeDefined()
+      }
     })
 
     it('recognizes "unlock" with pattern subject', () => {
       const result = parser.parse('unlock door')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('UNLOCK')
+        expect(result.command.subject).toBeDefined()
+      }
     })
   })
 
@@ -178,10 +226,15 @@ describe('Default Vocabulary', () => {
     it('recognizes "examine" with pattern subject', () => {
       const result = parser.parse('examine lamp')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('EXAMINE')
+        expect(result.command.subject).toBeDefined()
+      }
     })
 
     it('recognizes "x" as shortcut for examine', () => {
       const result = parser.parse('x lamp')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.verb).toBe('EXAMINE')
       }
@@ -189,6 +242,7 @@ describe('Default Vocabulary', () => {
 
     it('recognizes "inspect" as synonym for examine', () => {
       const result = parser.parse('inspect lamp')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.verb).toBe('EXAMINE')
       }
@@ -197,15 +251,24 @@ describe('Default Vocabulary', () => {
     it('recognizes "search" with pattern subject', () => {
       const result = parser.parse('search chest')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('SEARCH')
+        expect(result.command.subject).toBeDefined()
+      }
     })
 
     it('recognizes "read" with pattern subject', () => {
       const result = parser.parse('read book')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('READ')
+        expect(result.command.subject).toBeDefined()
+      }
     })
 
     it('recognizes "l" as shortcut for look', () => {
       const result = parser.parse('l')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.verb).toBe('LOOK')
       }
@@ -225,21 +288,37 @@ describe('Default Vocabulary', () => {
     it('recognizes "talk" with pattern subject', () => {
       const result = parser.parse('talk merchant')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('TALK')
+        expect(result.command.subject).toBeDefined()
+      }
     })
 
     it('recognizes "ask" with pattern subject_object', () => {
       const result = parser.parse('ask merchant about key')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('ASK')
+        expect(result.command.subject).toBeDefined()
+      }
     })
 
     it('recognizes "tell" with pattern subject_object', () => {
       const result = parser.parse('tell merchant about quest')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('TELL')
+        expect(result.command.subject).toBeDefined()
+      }
     })
 
     it('recognizes "shout" with pattern text', () => {
       const result = parser.parse('shout help')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('SHOUT')
+        expect(result.command.text).toBe('help')
+      }
     })
   })
 
@@ -247,28 +326,47 @@ describe('Default Vocabulary', () => {
     it('recognizes "attack" with pattern subject', () => {
       const result = parser.parse('attack troll')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('ATTACK')
+        expect(result.command.subject).toBeDefined()
+      }
     })
 
     it('recognizes "hit" with pattern subject', () => {
       const result = parser.parse('hit troll')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        // "hit" is a synonym for ATTACK, maps to canonical ATTACK
+        expect(result.command.verb).toBe('ATTACK')
+        expect(result.command.subject).toBeDefined()
+      }
     })
 
     it('recognizes "strike" as synonym for attack', () => {
       const result = parser.parse('strike troll')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.verb).toBe('ATTACK')
+        expect(result.command.subject).toBeDefined()
       }
     })
 
     it('recognizes "kill" with pattern subject', () => {
       const result = parser.parse('kill troll')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('KILL')
+        expect(result.command.subject).toBeDefined()
+      }
     })
 
     it('recognizes "fight" with pattern subject', () => {
       const result = parser.parse('fight troll')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('FIGHT')
+        expect(result.command.subject).toBeDefined()
+      }
     })
   })
 
@@ -283,6 +381,7 @@ describe('Default Vocabulary', () => {
 
     it('recognizes "i" as shortcut for inventory', () => {
       const result = parser.parse('i')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.verb).toBe('INVENTORY')
       }
@@ -290,6 +389,7 @@ describe('Default Vocabulary', () => {
 
     it('recognizes "inv" as shortcut for inventory', () => {
       const result = parser.parse('inv')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.verb).toBe('INVENTORY')
       }
@@ -298,26 +398,41 @@ describe('Default Vocabulary', () => {
     it('recognizes "score" with pattern none', () => {
       const result = parser.parse('score')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('SCORE')
+      }
     })
 
     it('recognizes "save" with pattern none', () => {
       const result = parser.parse('save')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('SAVE')
+      }
     })
 
     it('recognizes "load" with pattern none', () => {
       const result = parser.parse('load')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('LOAD')
+      }
     })
 
     it('recognizes "quit" with pattern none', () => {
       const result = parser.parse('quit')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('QUIT')
+      }
     })
 
     it('recognizes "help" with pattern none', () => {
       const result = parser.parse('help')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('HELP')
+      }
     })
   })
 })
@@ -337,6 +452,9 @@ describe('Command Patterns', () => {
     it('parses "inventory" as verb-only command', () => {
       const result = parser.parse('inventory')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('INVENTORY')
+      }
     })
 
     it('returns command with verb and no subject/object', () => {
@@ -360,26 +478,41 @@ describe('Command Patterns', () => {
     it('parses "n" as direction command', () => {
       const result = parser.parse('n')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.direction).toBe('NORTH')
+      }
     })
 
     it('parses "northeast" as direction command', () => {
       const result = parser.parse('northeast')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.direction).toBe('NORTHEAST')
+      }
     })
 
     it('parses "ne" as direction command', () => {
       const result = parser.parse('ne')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.direction).toBe('NORTHEAST')
+      }
     })
 
     it('parses "up" as direction command', () => {
       const result = parser.parse('up')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.direction).toBe('UP')
+      }
     })
 
     it('parses "u" as direction command', () => {
       const result = parser.parse('u')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.direction).toBe('UP')
+      }
     })
 
     it('returns command with direction property', () => {
@@ -403,11 +536,19 @@ describe('Command Patterns', () => {
     it('parses "go n" as direction command', () => {
       const result = parser.parse('go n')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('GO')
+        expect(result.command.direction).toBe('NORTH')
+      }
     })
 
     it('parses "walk east" as direction command', () => {
       const result = parser.parse('walk east')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('GO')
+        expect(result.command.direction).toBe('EAST')
+      }
     })
 
     it('returns command with verb GO and direction', () => {
@@ -432,15 +573,24 @@ describe('Command Patterns', () => {
     it('parses "examine door" with subject', () => {
       const result = parser.parse('examine door')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('EXAMINE')
+        expect(result.command.subject?.noun).toBe('door')
+      }
     })
 
     it('parses "take key" with subject', () => {
       const result = parser.parse('take key')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('GET')
+        expect(result.command.subject?.noun).toBe('key')
+      }
     })
 
     it('calls resolver with noun and empty adjectives', () => {
       const result = parser.parse('get lamp')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.subject?.adjectives).toEqual([])
       }
@@ -448,6 +598,7 @@ describe('Command Patterns', () => {
 
     it('returns command with resolved subject', () => {
       const result = parser.parse('get lamp')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.subject?.id).toBe('lamp-1')
       }
@@ -467,15 +618,26 @@ describe('Command Patterns', () => {
     it('parses "examine old door" with adjective', () => {
       const result = parser.parse('examine old door')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('EXAMINE')
+        expect(result.command.subject?.noun).toBe('door')
+        expect(result.command.subject?.adjectives).toContain('old')
+      }
     })
 
     it('parses "take rusty key" with adjective', () => {
       const result = parser.parse('take rusty key')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('GET')
+        expect(result.command.subject?.noun).toBe('key')
+        expect(result.command.subject?.adjectives).toContain('rusty')
+      }
     })
 
     it('calls resolver with noun and adjectives array', () => {
       const result = parser.parse('get red ball')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.subject?.adjectives).toEqual(['red'])
       }
@@ -483,6 +645,7 @@ describe('Command Patterns', () => {
 
     it('handles multiple adjectives "get big red ball"', () => {
       const result = parser.parse('get big red ball')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.subject?.adjectives).toEqual(['big', 'red'])
       }
@@ -502,15 +665,28 @@ describe('Command Patterns', () => {
     it('parses "hit barrel with hammer" with subject and object', () => {
       const result = parser.parse('hit barrel with hammer')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('ATTACK')
+        expect(result.command.subject?.noun).toBe('barrel')
+        expect(result.command.object?.noun).toBe('hammer')
+        expect(result.command.preposition).toBe('with')
+      }
     })
 
     it('parses "give coin to merchant" with subject and object', () => {
       const result = parser.parse('give coin to merchant')
       expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('GIVE')
+        expect(result.command.subject?.noun).toBe('coin')
+        expect(result.command.object?.noun).toBe('merchant')
+        expect(result.command.preposition).toBe('to')
+      }
     })
 
     it('returns command with preposition property', () => {
       const result = parser.parse('put key in box')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.preposition).toBe('in')
       }
@@ -518,6 +694,7 @@ describe('Command Patterns', () => {
 
     it('resolves both subject and object entities', () => {
       const result = parser.parse('put key in box')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.subject?.id).toBe('key-1')
         expect(result.command.object?.id).toBe('box-1')
@@ -536,6 +713,7 @@ describe('Command Patterns', () => {
 
     it('parses "say hello there friend" as single text', () => {
       const result = parser.parse('say hello there friend')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.text).toBe('hello there friend')
       }
@@ -543,15 +721,17 @@ describe('Command Patterns', () => {
 
     it('preserves original case in text content', () => {
       const result = parser.parse('say Hello World')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
-        expect(result.command.text).toContain('Hello World')
+        expect(result.command.text).toBe('Hello World')
       }
     })
 
     it('returns command with text property', () => {
       const result = parser.parse('say test')
+      expect(result.type).toBe('command')
       if (result.type === 'command') {
-        expect(result.command.text).toBeDefined()
+        expect(result.command.text).toBe('test')
       }
     })
   })
