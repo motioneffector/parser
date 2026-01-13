@@ -17,6 +17,11 @@
     "text-adventure",
     "interactive-fiction",
     "game-development",
+    "command-parser",
+    "natural-language",
+    "game-engine",
+    "text-parser",
+    "adventure-game",
     "typescript"
   ],
   "type": "module",
