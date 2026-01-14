@@ -5,9 +5,31 @@
 import type { Vocabulary } from './types'
 
 /**
- * Default vocabulary with common text adventure verbs and directions
+ * Recursively freezes an object and all nested objects/arrays.
+ * This prevents accidental mutations at any depth.
  */
-export const DEFAULT_VOCABULARY: Vocabulary = {
+function deepFreeze<T extends object>(obj: T): Readonly<T> {
+  // Freeze the object itself
+  Object.freeze(obj)
+
+  // Recursively freeze all properties
+  for (const value of Object.values(obj)) {
+    if (value !== null && typeof value === 'object' && !Object.isFrozen(value)) {
+      deepFreeze(value)
+    }
+  }
+
+  return obj
+}
+
+/**
+ * Default vocabulary with common text adventure verbs and directions.
+ *
+ * IMPORTANT: This object is deeply frozen to prevent accidental mutation.
+ * Parser instances must create their own mutable copies via buildVocabulary().
+ * Any attempt to mutate this object will throw a TypeError in strict mode.
+ */
+export const DEFAULT_VOCABULARY: Readonly<Vocabulary> = deepFreeze({
   verbs: [
     // Movement
     { canonical: 'GO', synonyms: ['go', 'walk', 'run'], pattern: 'direction' },
@@ -72,4 +94,4 @@ export const DEFAULT_VOCABULARY: Vocabulary = {
   prepositions: ['with', 'to', 'at', 'in', 'on', 'from', 'into', 'onto', 'about'],
 
   articles: ['the', 'a', 'an'],
-}
+})

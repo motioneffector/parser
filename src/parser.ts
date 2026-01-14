@@ -168,8 +168,37 @@ export function createParser(options: ParserOptions): Parser {
       adjectives.push(...words.slice(0, -1))
     }
 
-    // Resolve entity
-    const entities = options.resolver(noun, adjectives, scope ?? {})
+    // Resolve entity - handle resolver errors gracefully
+    let entities: ReturnType<typeof options.resolver>
+    try {
+      entities = options.resolver(noun, adjectives, scope ?? {})
+    } catch {
+      // Resolver threw an error - treat as unknown noun
+      const startToken = tokens[startIndex]
+      return {
+        entity: null,
+        consumed: index - startIndex,
+        error: {
+          type: 'unknown_noun',
+          noun,
+          position: startToken ? startToken.start : 0,
+        },
+      }
+    }
+
+    // Validate resolver return value - must be an array
+    if (!Array.isArray(entities)) {
+      const startToken = tokens[startIndex]
+      return {
+        entity: null,
+        consumed: index - startIndex,
+        error: {
+          type: 'unknown_noun',
+          noun,
+          position: startToken ? startToken.start : 0,
+        },
+      }
+    }
 
     if (entities.length === 0) {
       const startToken = tokens[startIndex]
@@ -530,26 +559,37 @@ export function createParser(options: ParserOptions): Parser {
 }
 
 /**
- * Build vocabulary from options
+ * Build vocabulary from options.
+ *
+ * Creates a fresh vocabulary instance with its own arrays to ensure
+ * parser instances don't share mutable state. This is critical for
+ * addVerb() and addDirection() to work correctly without affecting
+ * other parser instances.
  */
 function buildVocabulary(vocabOptions?: ParserOptions['vocabulary']): Vocabulary {
   if (!vocabOptions) {
-    return { ...DEFAULT_VOCABULARY }
+    // Create fresh arrays - do NOT reference DEFAULT_VOCABULARY arrays directly
+    return {
+      verbs: [...DEFAULT_VOCABULARY.verbs],
+      directions: [...DEFAULT_VOCABULARY.directions],
+      prepositions: [...DEFAULT_VOCABULARY.prepositions],
+      articles: [...DEFAULT_VOCABULARY.articles],
+    }
   }
 
   const extend = vocabOptions.extend ?? true
 
   if (!extend) {
-    // Replace defaults entirely
+    // Replace defaults entirely - create fresh arrays from provided values
     return {
-      verbs: vocabOptions.verbs ?? [],
-      directions: vocabOptions.directions ?? [],
-      prepositions: vocabOptions.prepositions ?? [],
-      articles: vocabOptions.articles ?? [],
+      verbs: [...(vocabOptions.verbs ?? [])],
+      directions: [...(vocabOptions.directions ?? [])],
+      prepositions: [...(vocabOptions.prepositions ?? [])],
+      articles: [...(vocabOptions.articles ?? [])],
     }
   }
 
-  // Extend defaults
+  // Extend defaults - spread creates fresh arrays
   return {
     verbs: [...DEFAULT_VOCABULARY.verbs, ...(vocabOptions.verbs ?? [])],
     directions: [...DEFAULT_VOCABULARY.directions, ...(vocabOptions.directions ?? [])],
