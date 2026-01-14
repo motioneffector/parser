@@ -223,4 +223,95 @@ describe('createParser()', () => {
       }
     })
   })
+
+  describe('Security: Input Length DoS Prevention', () => {
+    it('rejects input exceeding maximum length', () => {
+      const parser = createParser({ resolver: mockResolver })
+      // Create input exceeding 1 million characters
+      const maliciousInput = 'a'.repeat(1_000_001)
+
+      expect(() => parser.parse(maliciousInput)).toThrow(ValidationError)
+      expect(() => parser.parse(maliciousInput)).toThrow(
+        /Input exceeds maximum length of 1000000 characters/
+      )
+    })
+
+    it('accepts input at exactly maximum length', () => {
+      const parser = createParser({ resolver: mockResolver })
+      // Create input at exactly 1 million characters
+      const maxInput = 'a'.repeat(1_000_000)
+
+      const result = parser.parse(maxInput)
+      expect(result).toBeDefined()
+      expect(result.type).toBe('unknown_verb')
+    })
+
+    it('rejects massively oversized input (10MB)', () => {
+      const parser = createParser({ resolver: mockResolver })
+      // 10 million character string
+      const hugeInput = 'x'.repeat(10_000_000)
+
+      expect(() => parser.parse(hugeInput)).toThrow(ValidationError)
+      expect(() => parser.parse(hugeInput)).toThrow(/Input exceeds maximum length/)
+    })
+
+    it('handles input just under limit efficiently', () => {
+      const parser = createParser({ resolver: mockResolver })
+      const largeInput = 'get lamp and then ' + 'a'.repeat(999_980)
+
+      const start = Date.now()
+      const result = parser.parse(largeInput)
+      const elapsed = Date.now() - start
+
+      expect(result).toBeDefined()
+      // Should complete in reasonable time even at max size
+      expect(elapsed).toBeLessThan(2000)
+    })
+
+    it('prevents DoS via repeated words near limit', () => {
+      const parser = createParser({ resolver: mockResolver })
+      // Create input with many repeated tokens near limit
+      const repeatedWords = 'word '.repeat(200_000) // 200k * 5 chars = 1M chars
+
+      const start = Date.now()
+      const result = parser.parse(repeatedWords)
+      const elapsed = Date.now() - start
+
+      expect(result).toBeDefined()
+      expect(elapsed).toBeLessThan(2000)
+    })
+
+    it('validates length before tokenization', () => {
+      const parser = createParser({ resolver: mockResolver })
+      // This test ensures the length check happens early, preventing
+      // any expensive tokenization work on oversized input
+      const oversized = 'x'.repeat(2_000_000)
+
+      // Should throw immediately without doing expensive work
+      const start = Date.now()
+      expect(() => parser.parse(oversized)).toThrow(ValidationError)
+      const elapsed = Date.now() - start
+
+      // Should fail almost instantly (length check is O(1))
+      expect(elapsed).toBeLessThan(50)
+    })
+
+    it('handles unicode characters in length calculation', () => {
+      const parser = createParser({ resolver: mockResolver })
+      // Unicode characters still count as individual chars in length
+      // Emoji and other multi-byte chars count as 1-2 UTF-16 code units
+      const unicodeInput = '🔑'.repeat(500_001) // Over limit with emoji
+
+      expect(() => parser.parse(unicodeInput)).toThrow(ValidationError)
+    })
+
+    it('protects against quadratic behavior with nested quotes', () => {
+      const parser = createParser({ resolver: mockResolver })
+      // Nested quotes can cause quadratic behavior in tokenizer
+      // Ensure we reject before hitting pathological case
+      const nestedQuotes = '"'.repeat(1_000_001)
+
+      expect(() => parser.parse(nestedQuotes)).toThrow(ValidationError)
+    })
+  })
 })
