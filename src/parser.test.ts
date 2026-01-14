@@ -93,6 +93,101 @@ describe('createParser()', () => {
     })
   })
 
+  describe('Instance Isolation', () => {
+    it('parser instances have independent vocabulary state', () => {
+      // Create two parsers
+      const parser1 = createParser({ resolver: mockResolver })
+      const parser2 = createParser({ resolver: mockResolver })
+
+      // Add a custom verb to parser1 only
+      parser1.addVerb({
+        canonical: 'CUSTOM',
+        synonyms: ['custom'],
+        pattern: 'none',
+      })
+
+      // parser1 should recognize the custom verb
+      const result1 = parser1.parse('custom')
+      expect(result1.type).toBe('command')
+      if (result1.type === 'command') {
+        expect(result1.command.verb).toBe('CUSTOM')
+      }
+
+      // parser2 should NOT recognize the custom verb
+      const result2 = parser2.parse('custom')
+      expect(result2.type).toBe('unknown_verb')
+    })
+
+    it('addDirection on one parser does not affect another', () => {
+      // Create two parsers
+      const parser1 = createParser({ resolver: mockResolver })
+      const parser2 = createParser({ resolver: mockResolver })
+
+      // Add a custom direction to parser1 only
+      parser1.addDirection({
+        canonical: 'WARP',
+        aliases: ['warp'],
+      })
+
+      // parser1 should recognize the custom direction
+      const result1 = parser1.parse('warp')
+      expect(result1.type).toBe('command')
+      if (result1.type === 'command') {
+        expect(result1.command.direction).toBe('WARP')
+      }
+
+      // parser2 should NOT recognize the custom direction
+      const result2 = parser2.parse('warp')
+      expect(result2.type).toBe('unknown_verb')
+    })
+
+    it('multiple parsers can add verbs independently', () => {
+      // Create multiple parsers
+      const parsers = Array.from({ length: 5 }, () =>
+        createParser({ resolver: mockResolver })
+      )
+
+      // Add a unique verb to each parser
+      parsers.forEach((parser, i) => {
+        parser.addVerb({
+          canonical: `VERB${i}`,
+          synonyms: [`verb${i}`],
+          pattern: 'none',
+        })
+      })
+
+      // Each parser should only recognize its own verb
+      parsers.forEach((parser, i) => {
+        // Should recognize its own verb
+        const ownResult = parser.parse(`verb${i}`)
+        expect(ownResult.type).toBe('command')
+
+        // Should NOT recognize other verbs
+        for (let j = 0; j < parsers.length; j++) {
+          if (j !== i) {
+            const otherResult = parser.parse(`verb${j}`)
+            expect(otherResult.type).toBe('unknown_verb')
+          }
+        }
+      })
+    })
+
+    it('DEFAULT_VOCABULARY is not mutated by addVerb', () => {
+      // Create a parser and add a verb
+      const parser = createParser({ resolver: mockResolver })
+      parser.addVerb({
+        canonical: 'MUTATE',
+        synonyms: ['mutate'],
+        pattern: 'none',
+      })
+
+      // Create a new parser - it should NOT see the added verb
+      const freshParser = createParser({ resolver: mockResolver })
+      const result = freshParser.parse('mutate')
+      expect(result.type).toBe('unknown_verb')
+    })
+  })
+
   describe('Options', () => {
     it('respects partialMatch option when set to false', () => {
       const parser = createParser({ resolver: mockResolver, partialMatch: false })
