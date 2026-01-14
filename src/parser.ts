@@ -5,6 +5,12 @@
 import { ValidationError } from './errors'
 import { tokenize } from './tokenizer'
 import { DEFAULT_VOCABULARY } from './default-vocabulary'
+
+/**
+ * Maximum input length in characters (1MB of UTF-16 chars = ~2MB memory)
+ * This prevents DoS attacks via extremely large input strings.
+ */
+const MAX_INPUT_LENGTH = 1_000_000
 import type {
   Parser,
   ParserOptions,
@@ -246,6 +252,14 @@ export function createParser(options: ParserOptions): Parser {
   function parse(input: string, parseOptions?: ParseOptions): ParseResult {
     const raw = input
     const scope = parseOptions?.scope
+
+    // Validate input length to prevent DoS attacks
+    if (input.length > MAX_INPUT_LENGTH) {
+      throw new ValidationError(
+        `Input exceeds maximum length of ${MAX_INPUT_LENGTH} characters`,
+        'input'
+      )
+    }
 
     // Check for scope change (room change) to clear pronoun
     if (scope && scope.room !== lastScope) {
