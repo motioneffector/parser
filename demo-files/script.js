@@ -1184,6 +1184,174 @@ renderCustomVocab()
 updatePatternPreview()
 
 // ============================================
+// DEMO PLAYBACK
+// ============================================
+
+const demoPlayback = {
+  running: false,
+  delay: 400, // Base delay between actions (ms)
+  typeDelay: 50, // Delay between keystrokes (ms)
+
+  async sleep(ms) {
+    return new Promise(r => setTimeout(r, ms))
+  },
+
+  async typeText(input, text) {
+    input.value = ''
+    input.focus()
+    for (const char of text) {
+      input.value += char
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+      await this.sleep(this.typeDelay)
+    }
+  },
+
+  scrollToElement(el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  },
+
+  async playExhibit1() {
+    const progressText = document.getElementById('progress-text')
+    const exhibit = document.getElementById('exhibit-1')
+    const input = document.getElementById('command-input')
+
+    this.scrollToElement(exhibit)
+    await this.sleep(this.delay)
+
+    const commands = [
+      'look',
+      'get the brass lamp',
+      'exa lamp',
+      'put key in chest',
+      'go north',
+      'say hello world',
+      'dance',
+      'get ball'
+    ]
+
+    for (const cmd of commands) {
+      progressText.textContent = `Demo: Command Anatomy - "${cmd}"`
+      await this.typeText(input, cmd)
+      await this.sleep(this.delay * 1.5)
+    }
+  },
+
+  async playExhibit2() {
+    const progressText = document.getElementById('progress-text')
+    const exhibit = document.getElementById('exhibit-2')
+
+    this.scrollToElement(exhibit)
+    await this.sleep(this.delay)
+
+    // Reset the room first
+    resetAdventure()
+    await this.sleep(this.delay)
+
+    const commands = [
+      'get lamp',
+      'examine it',
+      'get key',
+      'drop lamp',
+      'inventory',
+      'north',
+      'look',
+      'get knife',
+      'south',
+      'get ball'
+    ]
+
+    for (const cmd of commands) {
+      progressText.textContent = `Demo: Adventure Room - "${cmd}"`
+
+      // If ambiguous result pending, choose option 1
+      if (disambiguationPending) {
+        executeAdventureCommand('1')
+        await this.sleep(this.delay)
+      }
+
+      executeAdventureCommand(cmd)
+      await this.sleep(this.delay * 1.5)
+    }
+
+    // Handle final disambiguation if any
+    if (disambiguationPending) {
+      progressText.textContent = `Demo: Adventure Room - choosing "red ball"`
+      executeAdventureCommand('1')
+      await this.sleep(this.delay)
+    }
+  },
+
+  async playExhibit3() {
+    const progressText = document.getElementById('progress-text')
+    const exhibit = document.getElementById('exhibit-3')
+
+    this.scrollToElement(exhibit)
+    await this.sleep(this.delay)
+
+    // Add a custom verb
+    progressText.textContent = `Demo: Vocabulary Workshop - adding custom verb`
+    const canonicalInput = document.getElementById('verb-canonical')
+    const synonymsInput = document.getElementById('verb-synonyms')
+    const patternSelect = document.getElementById('verb-pattern')
+    const addBtn = document.getElementById('add-verb-btn')
+
+    await this.typeText(canonicalInput, 'ZORK')
+    await this.sleep(this.delay / 2)
+    await this.typeText(synonymsInput, 'zork, frotz, plugh')
+    await this.sleep(this.delay / 2)
+    patternSelect.value = 'none'
+    patternSelect.dispatchEvent(new Event('change'))
+    await this.sleep(this.delay)
+
+    addBtn.click()
+    await this.sleep(this.delay)
+
+    // Now try the custom verb in Exhibit 1
+    progressText.textContent = `Demo: Testing custom verb in Command Anatomy`
+    const exhibit1 = document.getElementById('exhibit-1')
+    const cmdInput = document.getElementById('command-input')
+
+    this.scrollToElement(exhibit1)
+    await this.sleep(this.delay)
+
+    await this.typeText(cmdInput, 'zork')
+    await this.sleep(this.delay * 2)
+  },
+
+  async run() {
+    if (this.running) return
+    this.running = true
+
+    const progressText = document.getElementById('progress-text')
+    const progressFill = document.getElementById('progress-fill')
+    const runBtn = document.getElementById('run-tests')
+
+    runBtn.disabled = true
+    progressFill.style.width = '100%'
+    progressFill.className = 'test-progress-fill success'
+
+    try {
+      progressText.textContent = 'Demo: Starting playback...'
+      await this.sleep(this.delay)
+
+      // Play through all exhibits
+      await this.playExhibit1()
+      await this.playExhibit2()
+      await this.playExhibit3()
+
+      progressText.textContent = 'Demo playback complete!'
+      progressFill.className = 'test-progress-fill success'
+    } catch (e) {
+      progressText.textContent = `Demo error: ${e.message}`
+      progressFill.className = 'test-progress-fill failure'
+    }
+
+    runBtn.disabled = false
+    this.running = false
+  }
+}
+
+// ============================================
 // TEST RUNNER
 // ============================================
 
@@ -1262,8 +1430,15 @@ const testRunner = {
     skippedCount.textContent = 0
     summary.classList.remove('hidden')
 
-    runBtn.disabled = false
     this.running = false
+
+    // Run demo playback after tests pass
+    if (failed === 0) {
+      await new Promise(r => setTimeout(r, 500))
+      await demoPlayback.run()
+    }
+
+    runBtn.disabled = false
   }
 }
 
