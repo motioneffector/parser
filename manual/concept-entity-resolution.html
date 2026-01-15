@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entity Resolution - @motioneffector/parser</title>
+  <link rel="stylesheet" href="../demo-files/demo.css">
+  <link rel="stylesheet" href="manual.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());</script>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1 class="header-title">@motioneffector/parser</h1>
+      <p class="header-description">Documentation</p>
+      <nav class="header-links">
+        <a href="../index.html" class="header-link">Demo</a>
+        <a href="https://www.npmjs.com/package/@motioneffector/parser" class="header-link">npm</a>
+        <a href="https://github.com/motioneffector/parser" class="header-link">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="manual-layout">
+      <aside class="manual-sidebar">
+        <nav class="sidebar-nav">
+<p><strong><a href="index.html">@motioneffector/parser</a></strong></p>
+<p><strong>Getting Started</strong></p>
+<ul>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="your-first-parse.html">Your First Parse</a></li>
+</ul>
+<p><strong>Core Concepts</strong></p>
+<ul>
+<li><a href="concept-vocabulary.html">Vocabulary</a></li>
+<li><a href="concept-verb-patterns.html">Verb Patterns</a></li>
+<li><a href="concept-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="concept-parse-results.html">Parse Results</a></li>
+<li><a href="concept-pronoun-tracking.html">Pronoun Tracking</a></li>
+</ul>
+<p><strong>Guides</strong></p>
+<ul>
+<li><a href="guide-parsing-commands.html">Parsing Commands</a></li>
+<li><a href="guide-handling-disambiguation.html">Handling Disambiguation</a></li>
+<li><a href="guide-custom-vocabulary.html">Custom Vocabulary</a></li>
+<li><a href="guide-error-handling.html">Error Handling</a></li>
+<li><a href="guide-using-partial-matching.html">Using Partial Matching</a></li>
+</ul>
+<p><strong>API Reference</strong></p>
+<ul>
+<li><a href="api-parser-configuration.html">Parser Configuration</a></li>
+<li><a href="api-parser-instance.html">Parser Instance</a></li>
+<li><a href="api-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="api-parse-results.html">Parse Results</a></li>
+<li><a href="api-errors.html">Errors</a></li>
+<li><a href="api-tokenization.html">Tokenization</a></li>
+</ul>
+
+        </nav>
+      </aside>
+
+      <main class="manual-content">
+        <article class="manual-article">
+<h1>Entity Resolution</h1>
+<p>Entity resolution is how the parser connects words to things in your game. When a player types &quot;get the red ball&quot;, the parser extracts &quot;red&quot; (adjective) and &quot;ball&quot; (noun), then calls your resolver function to find matching entities. You return what you find from your game state.</p>
+<h2>How It Works</h2>
+<pre><code>Player input: &quot;get the red ball from the chest&quot;
+                    ↓
+Parser extracts: noun=&quot;ball&quot;, adjectives=[&quot;red&quot;]
+                    ↓
+Your resolver: Look up in current room/inventory
+                    ↓
+Return: [{ id: &#39;ball-red&#39;, name: &#39;red ball&#39; }]
+                    ↓
+Parser builds: { subject: { id: &#39;ball-red&#39;, noun: &#39;ball&#39;, adjectives: [&#39;red&#39;] } }
+</code></pre>
+<p>The resolver receives three things:</p>
+<ul>
+<li><strong>noun</strong> - The noun word (always the last word of a noun phrase)</li>
+<li><strong>adjectives</strong> - Any adjectives before the noun (can be empty)</li>
+<li><strong>scope</strong> - Context you provide (current room, inventory, etc.)</li>
+</ul>
+<p>You return an array of matching entities:</p>
+<ul>
+<li><strong>One match</strong> → Success, parser uses this entity</li>
+<li><strong>Multiple matches</strong> → Ambiguous result, player must disambiguate</li>
+<li><strong>Empty array</strong> → Unknown noun result</li>
+</ul>
+<h2>Basic Usage</h2>
+<pre><code class="language-typescript">import { createParser } from &#39;@motioneffector/parser&#39;
+import type { ResolvedEntity, ResolverScope } from &#39;@motioneffector/parser&#39;
+
+// Your game&#39;s entity type
+interface GameItem {
+  id: string
+  name: string
+  adjectives: string[]
+  location: string
+}
+
+// Your game state
+const items: GameItem[] = [
+  { id: &#39;ball-red&#39;, name: &#39;ball&#39;, adjectives: [&#39;red&#39;], location: &#39;room-1&#39; },
+  { id: &#39;ball-blue&#39;, name: &#39;ball&#39;, adjectives: [&#39;blue&#39;], location: &#39;room-1&#39; },
+  { id: &#39;lamp-1&#39;, name: &#39;lamp&#39;, adjectives: [&#39;brass&#39;], location: &#39;room-1&#39; },
+]
+
+// Resolver connects parser to game state
+function resolver(
+  noun: string,
+  adjectives: string[],
+  scope: ResolverScope
+): ResolvedEntity[] {
+  const room = scope.room as string
+
+  // Find items matching noun in current room
+  let matches = items.filter(
+    item =&gt; item.name === noun &amp;&amp; item.location === room
+  )
+
+  // Filter by adjectives if provided
+  if (adjectives.length &gt; 0) {
+    matches = matches.filter(item =&gt;
+      adjectives.every(adj =&gt; item.adjectives.includes(adj))
+    )
+  }
+
+  return matches
+}
+
+const parser = createParser({ resolver })
+</code></pre>
+<h2>Key Points</h2>
+<ul>
+<li><strong>You control entity lookup</strong> - The parser doesn&#39;t know about your game; your resolver bridges the gap</li>
+<li><strong>Scope carries context</strong> - Pass the current room, inventory, or any data your resolver needs</li>
+<li><strong>Adjectives narrow matches</strong> - Use them to distinguish &quot;red ball&quot; from &quot;blue ball&quot;</li>
+<li><strong>Return value determines outcome</strong> - One match = success, many = ambiguous, none = unknown</li>
+</ul>
+<h2>Examples</h2>
+<h3>Simple Name Matching</h3>
+<pre><code class="language-typescript">function resolver(noun: string): ResolvedEntity[] {
+  const items = { lamp: { id: &#39;lamp-1&#39; }, key: { id: &#39;key-1&#39; } }
+  const item = items[noun as keyof typeof items]
+  return item ? [item] : []
+}
+</code></pre>
+<h3>With Adjective Filtering</h3>
+<pre><code class="language-typescript">function resolver(
+  noun: string,
+  adjectives: string[]
+): ResolvedEntity[] {
+  // All balls in the game
+  const balls = [
+    { id: &#39;ball-red&#39;, name: &#39;ball&#39;, color: &#39;red&#39; },
+    { id: &#39;ball-blue&#39;, name: &#39;ball&#39;, color: &#39;blue&#39; },
+  ]
+
+  let matches = balls.filter(b =&gt; b.name === noun)
+
+  // &quot;red ball&quot; filters to just the red one
+  if (adjectives.includes(&#39;red&#39;)) {
+    matches = matches.filter(b =&gt; b.color === &#39;red&#39;)
+  }
+  if (adjectives.includes(&#39;blue&#39;)) {
+    matches = matches.filter(b =&gt; b.color === &#39;blue&#39;)
+  }
+
+  return matches
+}
+</code></pre>
+<h3>With Scope</h3>
+<pre><code class="language-typescript">function resolver(
+  noun: string,
+  adjectives: string[],
+  scope: ResolverScope
+): ResolvedEntity[] {
+  const currentRoom = scope.room as Room
+  const inventory = scope.inventory as Item[]
+
+  // Search current room and inventory
+  const visible = [...currentRoom.items, ...inventory]
+  return visible.filter(item =&gt; item.name === noun)
+}
+
+// Pass scope when parsing
+parser.parse(&#39;get lamp&#39;, {
+  scope: {
+    room: currentRoom,
+    inventory: playerInventory
+  }
+})
+</code></pre>
+<h3>Triggering Disambiguation</h3>
+<pre><code class="language-typescript">function resolver(noun: string): ResolvedEntity[] {
+  if (noun === &#39;ball&#39;) {
+    // Multiple matches trigger disambiguation
+    return [
+      { id: &#39;ball-red&#39;, name: &#39;red ball&#39; },
+      { id: &#39;ball-blue&#39;, name: &#39;blue ball&#39; },
+    ]
+  }
+  return []
+}
+
+parser.parse(&#39;get ball&#39;)
+// { type: &#39;ambiguous&#39;, candidates: [...], original: &#39;ball&#39; }
+</code></pre>
+<h2>Related</h2>
+<ul>
+<li><strong><a href="concept-parse-results.html">Parse Results</a></strong> - Understanding what the parser returns</li>
+<li><strong><a href="guide-handling-disambiguation.html">Handling Disambiguation</a></strong> - What to do when multiple entities match</li>
+<li><strong><a href="api-entity-resolution.html">Entity Resolution API</a></strong> - Full type definitions</li>
+</ul>
+
+        </article>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

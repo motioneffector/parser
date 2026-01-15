@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Using Partial Matching - @motioneffector/parser</title>
+  <link rel="stylesheet" href="../demo-files/demo.css">
+  <link rel="stylesheet" href="manual.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());</script>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1 class="header-title">@motioneffector/parser</h1>
+      <p class="header-description">Documentation</p>
+      <nav class="header-links">
+        <a href="../index.html" class="header-link">Demo</a>
+        <a href="https://www.npmjs.com/package/@motioneffector/parser" class="header-link">npm</a>
+        <a href="https://github.com/motioneffector/parser" class="header-link">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="manual-layout">
+      <aside class="manual-sidebar">
+        <nav class="sidebar-nav">
+<p><strong><a href="index.html">@motioneffector/parser</a></strong></p>
+<p><strong>Getting Started</strong></p>
+<ul>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="your-first-parse.html">Your First Parse</a></li>
+</ul>
+<p><strong>Core Concepts</strong></p>
+<ul>
+<li><a href="concept-vocabulary.html">Vocabulary</a></li>
+<li><a href="concept-verb-patterns.html">Verb Patterns</a></li>
+<li><a href="concept-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="concept-parse-results.html">Parse Results</a></li>
+<li><a href="concept-pronoun-tracking.html">Pronoun Tracking</a></li>
+</ul>
+<p><strong>Guides</strong></p>
+<ul>
+<li><a href="guide-parsing-commands.html">Parsing Commands</a></li>
+<li><a href="guide-handling-disambiguation.html">Handling Disambiguation</a></li>
+<li><a href="guide-custom-vocabulary.html">Custom Vocabulary</a></li>
+<li><a href="guide-error-handling.html">Error Handling</a></li>
+<li><a href="guide-using-partial-matching.html">Using Partial Matching</a></li>
+</ul>
+<p><strong>API Reference</strong></p>
+<ul>
+<li><a href="api-parser-configuration.html">Parser Configuration</a></li>
+<li><a href="api-parser-instance.html">Parser Instance</a></li>
+<li><a href="api-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="api-parse-results.html">Parse Results</a></li>
+<li><a href="api-errors.html">Errors</a></li>
+<li><a href="api-tokenization.html">Tokenization</a></li>
+</ul>
+
+        </nav>
+      </aside>
+
+      <main class="manual-content">
+        <article class="manual-article">
+<h1>Using Partial Matching</h1>
+<p>Partial matching lets players abbreviate commands. &quot;exa lamp&quot; works like &quot;examine lamp&quot;, and &quot;n&quot; works for &quot;north&quot;. This guide covers how it works and how to configure it.</p>
+<h2>Prerequisites</h2>
+<p>Before starting, you should:</p>
+<ul>
+<li><a href="your-first-parse.html">Have basic parser setup</a></li>
+</ul>
+<h2>Overview</h2>
+<p>We&#39;ll configure partial matching by:</p>
+<ol>
+<li>Understanding default behavior</li>
+<li>Adjusting the minimum length</li>
+<li>Disabling it entirely</li>
+<li>Handling partial matching in your resolver</li>
+</ol>
+<h2>Step 1: Understand Default Behavior</h2>
+<p>Partial matching is enabled by default with a minimum of 3 characters:</p>
+<pre><code class="language-typescript">import { createParser } from &#39;@motioneffector/parser&#39;
+
+const parser = createParser({
+  resolver: (noun) =&gt; [{ id: noun }]
+})
+
+// These all work (3+ characters)
+parser.parse(&#39;exa lamp&#39;)    // EXAMINE
+parser.parse(&#39;inv&#39;)         // INVENTORY
+parser.parse(&#39;loo&#39;)         // LOOK
+
+// These don&#39;t work (&lt; 3 characters)
+parser.parse(&#39;ex lamp&#39;)     // unknown_verb
+parser.parse(&#39;in&#39;)          // Direction IN, not INVENTORY
+parser.parse(&#39;lo&#39;)          // unknown_verb
+</code></pre>
+<p>The parser matches the first verb whose synonym starts with the input.</p>
+<h2>Step 2: Adjust Minimum Length</h2>
+<p>Lower the minimum for more aggressive matching:</p>
+<pre><code class="language-typescript">const parser = createParser({
+  resolver: myResolver,
+  minPartialLength: 2
+})
+
+// Now 2 characters work
+parser.parse(&#39;ex lamp&#39;)   // EXAMINE
+parser.parse(&#39;ge lamp&#39;)   // GET
+parser.parse(&#39;lo&#39;)        // LOOK
+</code></pre>
+<p>Raise it for stricter matching:</p>
+<pre><code class="language-typescript">const parser = createParser({
+  resolver: myResolver,
+  minPartialLength: 4
+})
+
+// Now need 4+ characters
+parser.parse(&#39;exam lamp&#39;)  // EXAMINE
+parser.parse(&#39;exa lamp&#39;)   // unknown_verb
+</code></pre>
+<h2>Step 3: Disable Partial Matching</h2>
+<p>For exact-match-only parsing:</p>
+<pre><code class="language-typescript">const parser = createParser({
+  resolver: myResolver,
+  partialMatch: false
+})
+
+// Only full words work
+parser.parse(&#39;examine lamp&#39;)  // EXAMINE
+parser.parse(&#39;exa lamp&#39;)      // unknown_verb
+parser.parse(&#39;x lamp&#39;)        // EXAMINE (x is a full synonym)
+</code></pre>
+<h2>Step 4: Partial Matching in Resolver</h2>
+<p>The parser handles partial matching for verbs. For nouns, implement it in your resolver:</p>
+<pre><code class="language-typescript">function resolver(
+  noun: string,
+  adjectives: string[]
+): ResolvedEntity[] {
+  const items = [
+    { id: &#39;lamp-1&#39;, name: &#39;lamp&#39; },
+    { id: &#39;lantern-1&#39;, name: &#39;lantern&#39; },
+    { id: &#39;key-1&#39;, name: &#39;key&#39; },
+  ]
+
+  // Exact match first
+  const exact = items.filter(item =&gt; item.name === noun)
+  if (exact.length &gt; 0) return exact
+
+  // Partial match (if 3+ characters)
+  if (noun.length &gt;= 3) {
+    const partial = items.filter(item =&gt; item.name.startsWith(noun))
+    return partial
+  }
+
+  return []
+}
+
+const parser = createParser({ resolver })
+
+parser.parse(&#39;get lamp&#39;)     // Exact: lamp-1
+parser.parse(&#39;get lam&#39;)      // Partial: lamp-1
+parser.parse(&#39;get lan&#39;)      // Partial: lantern-1
+parser.parse(&#39;get la&#39;)       // Too short: unknown_noun
+parser.parse(&#39;get l&#39;)        // Too short: unknown_noun
+</code></pre>
+<h2>Complete Example</h2>
+<pre><code class="language-typescript">import { createParser } from &#39;@motioneffector/parser&#39;
+import type { ResolvedEntity } from &#39;@motioneffector/parser&#39;
+
+// Game items
+const items = [
+  { id: &#39;lamp-1&#39;, name: &#39;lamp&#39;, aliases: [&#39;light&#39;] },
+  { id: &#39;lantern-1&#39;, name: &#39;lantern&#39;, aliases: [] },
+  { id: &#39;sword-1&#39;, name: &#39;sword&#39;, aliases: [&#39;blade&#39;] },
+  { id: &#39;shield-1&#39;, name: &#39;shield&#39;, aliases: [] },
+]
+
+// Resolver with partial matching for nouns
+function resolver(noun: string, adjectives: string[]): ResolvedEntity[] {
+  const minLength = 3
+
+  // Check exact matches first (including aliases)
+  for (const item of items) {
+    if (item.name === noun || item.aliases.includes(noun)) {
+      return [item]
+    }
+  }
+
+  // Check partial matches (primary name only)
+  if (noun.length &gt;= minLength) {
+    const matches = items.filter(item =&gt; item.name.startsWith(noun))
+    if (matches.length === 1) {
+      return matches
+    }
+    if (matches.length &gt; 1) {
+      return matches  // Will trigger disambiguation
+    }
+  }
+
+  return []
+}
+
+// Parser with partial matching for verbs
+const parser = createParser({
+  resolver,
+  partialMatch: true,
+  minPartialLength: 3
+})
+
+// Test
+function test(input: string): void {
+  const result = parser.parse(input)
+  if (result.type === &#39;command&#39;) {
+    console.log(`${input} → ${result.command.verb} ${result.command.subject?.id || &#39;&#39;}`)
+  } else if (result.type === &#39;ambiguous&#39;) {
+    console.log(`${input} → ambiguous: ${result.candidates.map(c =&gt; c.id).join(&#39;, &#39;)}`)
+  } else {
+    console.log(`${input} → ${result.type}`)
+  }
+}
+
+// Verb partial matching
+test(&#39;examine lamp&#39;)     // EXAMINE lamp-1
+test(&#39;exa lamp&#39;)         // EXAMINE lamp-1
+test(&#39;ex lamp&#39;)          // unknown_verb (&lt; 3 chars)
+
+// Noun partial matching (in resolver)
+test(&#39;get lamp&#39;)         // GET lamp-1
+test(&#39;get lam&#39;)          // GET lamp-1
+test(&#39;get lan&#39;)          // GET lantern-1
+test(&#39;get la&#39;)           // unknown_noun (&lt; 3 chars)
+
+// Ambiguity from partials
+test(&#39;get sw&#39;)           // unknown_noun (&lt; 3 chars)
+test(&#39;get swo&#39;)          // GET sword-1
+test(&#39;get s&#39;)            // unknown_noun
+
+// Note: &quot;sh&quot; matching both sword and shield requires minLength 2
+</code></pre>
+<h2>Variations</h2>
+<h3>Fuzzy Matching</h3>
+<p>For typo tolerance, implement fuzzy matching in your resolver:</p>
+<pre><code class="language-typescript">function resolver(noun: string): ResolvedEntity[] {
+  const items = [
+    { id: &#39;lamp-1&#39;, name: &#39;lamp&#39; },
+    { id: &#39;sword-1&#39;, name: &#39;sword&#39; },
+  ]
+
+  // Exact match
+  const exact = items.filter(i =&gt; i.name === noun)
+  if (exact.length &gt; 0) return exact
+
+  // Fuzzy match (Levenshtein distance &lt;= 2)
+  const fuzzy = items.filter(i =&gt;
+    levenshteinDistance(i.name, noun) &lt;= 2
+  )
+  return fuzzy
+}
+
+// Now handles typos
+parser.parse(&#39;get lampp&#39;)   // lamp-1 (1 char off)
+parser.parse(&#39;get swrod&#39;)   // sword-1 (1 char transposed)
+</code></pre>
+<h3>Case Sensitivity</h3>
+<p>The parser lowercases all input. If you need case-sensitive nouns:</p>
+<pre><code class="language-typescript">function resolver(noun: string): ResolvedEntity[] {
+  // noun is already lowercase from tokenizer
+  // Match against lowercase item names
+  return items.filter(i =&gt; i.name.toLowerCase() === noun)
+}
+</code></pre>
+<h2>Troubleshooting</h2>
+<h3>Wrong Verb Matched</h3>
+<p><strong>Symptom:</strong> &quot;lo&quot; matches LOCK instead of LOOK</p>
+<p><strong>Cause:</strong> Verbs are checked in order; LOCK comes before LOOK in default vocabulary</p>
+<p><strong>Solution:</strong> Increase minPartialLength or ensure unique prefixes</p>
+<h3>Partial Noun Not Working</h3>
+<p><strong>Symptom:</strong> &quot;get lam&quot; returns unknown_noun</p>
+<p><strong>Cause:</strong> Partial matching for nouns must be in your resolver</p>
+<p><strong>Solution:</strong> Implement startsWith logic in resolver as shown above</p>
+<h3>Too Many Ambiguous Results</h3>
+<p><strong>Symptom:</strong> Partials often trigger disambiguation</p>
+<p><strong>Cause:</strong> Multiple items share prefix</p>
+<p><strong>Solution:</strong> Increase minimum length or improve item naming</p>
+<h2>See Also</h2>
+<ul>
+<li><strong><a href="concept-vocabulary.html">Vocabulary</a></strong> - How verbs and synonyms work</li>
+<li><strong><a href="concept-entity-resolution.html">Entity Resolution</a></strong> - Resolver implementation</li>
+<li><strong><a href="api-parser-configuration.html">Parser Configuration API</a></strong> - partialMatch options</li>
+</ul>
+
+        </article>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

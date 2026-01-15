@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pronoun Tracking - @motioneffector/parser</title>
+  <link rel="stylesheet" href="../demo-files/demo.css">
+  <link rel="stylesheet" href="manual.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());</script>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1 class="header-title">@motioneffector/parser</h1>
+      <p class="header-description">Documentation</p>
+      <nav class="header-links">
+        <a href="../index.html" class="header-link">Demo</a>
+        <a href="https://www.npmjs.com/package/@motioneffector/parser" class="header-link">npm</a>
+        <a href="https://github.com/motioneffector/parser" class="header-link">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="manual-layout">
+      <aside class="manual-sidebar">
+        <nav class="sidebar-nav">
+<p><strong><a href="index.html">@motioneffector/parser</a></strong></p>
+<p><strong>Getting Started</strong></p>
+<ul>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="your-first-parse.html">Your First Parse</a></li>
+</ul>
+<p><strong>Core Concepts</strong></p>
+<ul>
+<li><a href="concept-vocabulary.html">Vocabulary</a></li>
+<li><a href="concept-verb-patterns.html">Verb Patterns</a></li>
+<li><a href="concept-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="concept-parse-results.html">Parse Results</a></li>
+<li><a href="concept-pronoun-tracking.html">Pronoun Tracking</a></li>
+</ul>
+<p><strong>Guides</strong></p>
+<ul>
+<li><a href="guide-parsing-commands.html">Parsing Commands</a></li>
+<li><a href="guide-handling-disambiguation.html">Handling Disambiguation</a></li>
+<li><a href="guide-custom-vocabulary.html">Custom Vocabulary</a></li>
+<li><a href="guide-error-handling.html">Error Handling</a></li>
+<li><a href="guide-using-partial-matching.html">Using Partial Matching</a></li>
+</ul>
+<p><strong>API Reference</strong></p>
+<ul>
+<li><a href="api-parser-configuration.html">Parser Configuration</a></li>
+<li><a href="api-parser-instance.html">Parser Instance</a></li>
+<li><a href="api-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="api-parse-results.html">Parse Results</a></li>
+<li><a href="api-errors.html">Errors</a></li>
+<li><a href="api-tokenization.html">Tokenization</a></li>
+</ul>
+
+        </nav>
+      </aside>
+
+      <main class="manual-content">
+        <article class="manual-article">
+<h1>Pronoun Tracking</h1>
+<p>The parser automatically tracks the last resolved entity as &quot;it&quot;. When a player types &quot;get lamp&quot; then &quot;examine it&quot;, the parser substitutes the lamp for &quot;it&quot; without any work on your part. This makes natural multi-command sequences feel fluid.</p>
+<h2>How It Works</h2>
+<pre><code>&gt; get lamp
+  Parser resolves &quot;lamp&quot; → { id: &#39;lamp-1&#39; }
+  Parser remembers: lastReferent = { id: &#39;lamp-1&#39;, noun: &#39;lamp&#39; }
+
+&gt; examine it
+  Parser sees &quot;it&quot; → uses lastReferent
+  Returns: { verb: &#39;EXAMINE&#39;, subject: { id: &#39;lamp-1&#39;, noun: &#39;lamp&#39; } }
+
+&gt; drop it
+  Parser sees &quot;it&quot; → still lamp-1
+  Returns: { verb: &#39;DROP&#39;, subject: { id: &#39;lamp-1&#39;, noun: &#39;lamp&#39; } }
+</code></pre>
+<p>The referent clears in two situations:</p>
+<ol>
+<li>You call <code>parser.clearPronoun()</code></li>
+<li>The <code>scope.room</code> changes between parse calls</li>
+</ol>
+<h2>Basic Usage</h2>
+<pre><code class="language-typescript">import { createParser } from &#39;@motioneffector/parser&#39;
+
+const parser = createParser({
+  resolver: (noun) =&gt; {
+    const items: Record&lt;string, { id: string }&gt; = {
+      lamp: { id: &#39;lamp-1&#39; },
+      key: { id: &#39;key-1&#39; },
+    }
+    return items[noun] ? [items[noun]] : []
+  }
+})
+
+// Establish a referent
+parser.parse(&#39;get lamp&#39;)
+
+// &quot;it&quot; now refers to the lamp
+const result = parser.parse(&#39;examine it&#39;)
+if (result.type === &#39;command&#39;) {
+  result.command.subject?.id  // &#39;lamp-1&#39;
+}
+</code></pre>
+<h2>Key Points</h2>
+<ul>
+<li><strong>Automatic tracking</strong> - No setup required; works out of the box</li>
+<li><strong>Works in both positions</strong> - &quot;examine it&quot; (subject) and &quot;put key in it&quot; (object)</li>
+<li><strong>Clears on room change</strong> - Prevents stale references when moving between rooms</li>
+<li><strong>Error if no referent</strong> - Using &quot;it&quot; before any entity was resolved returns a parse error</li>
+</ul>
+<h2>Examples</h2>
+<h3>Subject Position</h3>
+<pre><code class="language-typescript">parser.parse(&#39;get lamp&#39;)
+parser.parse(&#39;examine it&#39;)   // Examines the lamp
+parser.parse(&#39;drop it&#39;)      // Drops the lamp
+</code></pre>
+<h3>Object Position</h3>
+<pre><code class="language-typescript">parser.parse(&#39;get lamp&#39;)
+parser.parse(&#39;put key in it&#39;)  // Puts key in the lamp
+
+if (result.type === &#39;command&#39;) {
+  result.command.subject?.id  // &#39;key-1&#39;
+  result.command.object?.id   // &#39;lamp-1&#39; (from &quot;it&quot;)
+}
+</code></pre>
+<h3>Room Change Clears Reference</h3>
+<pre><code class="language-typescript">// In room 1
+parser.parse(&#39;get lamp&#39;, { scope: { room: &#39;room-1&#39; } })
+
+// Move to room 2 - referent clears
+const result = parser.parse(&#39;examine it&#39;, { scope: { room: &#39;room-2&#39; } })
+
+if (result.type === &#39;parse_error&#39;) {
+  result.message  // &#39;Cannot use &quot;it&quot; without a previous referent&#39;
+}
+</code></pre>
+<h3>Manual Clearing</h3>
+<pre><code class="language-typescript">parser.parse(&#39;get lamp&#39;)
+parser.clearPronoun()
+
+const result = parser.parse(&#39;examine it&#39;)
+// parse_error: Cannot use &quot;it&quot; without a previous referent
+</code></pre>
+<h3>No Prior Referent</h3>
+<pre><code class="language-typescript">const parser = createParser({ resolver: () =&gt; [] })
+
+const result = parser.parse(&#39;get it&#39;)
+// parse_error: Cannot use &quot;it&quot; without a previous referent
+</code></pre>
+<h3>Referent Updates</h3>
+<p>Each successful single-entity resolution updates the referent:</p>
+<pre><code class="language-typescript">parser.parse(&#39;get lamp&#39;)     // referent = lamp
+parser.parse(&#39;examine key&#39;)  // referent = key (updated)
+parser.parse(&#39;drop it&#39;)      // drops the key, not the lamp
+</code></pre>
+<h2>Related</h2>
+<ul>
+<li><strong><a href="guide-parsing-commands.html">Parsing Commands</a></strong> - Full game loop with room changes</li>
+<li><strong><a href="api-parser-instance.html">Parser Instance API</a></strong> - clearPronoun() method</li>
+<li><strong><a href="concept-parse-results.html">Parse Results</a></strong> - Parse error when no referent</li>
+</ul>
+
+        </article>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

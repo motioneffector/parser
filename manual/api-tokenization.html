@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tokenization API - @motioneffector/parser</title>
+  <link rel="stylesheet" href="../demo-files/demo.css">
+  <link rel="stylesheet" href="manual.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());</script>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1 class="header-title">@motioneffector/parser</h1>
+      <p class="header-description">Documentation</p>
+      <nav class="header-links">
+        <a href="../index.html" class="header-link">Demo</a>
+        <a href="https://www.npmjs.com/package/@motioneffector/parser" class="header-link">npm</a>
+        <a href="https://github.com/motioneffector/parser" class="header-link">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="manual-layout">
+      <aside class="manual-sidebar">
+        <nav class="sidebar-nav">
+<p><strong><a href="index.html">@motioneffector/parser</a></strong></p>
+<p><strong>Getting Started</strong></p>
+<ul>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="your-first-parse.html">Your First Parse</a></li>
+</ul>
+<p><strong>Core Concepts</strong></p>
+<ul>
+<li><a href="concept-vocabulary.html">Vocabulary</a></li>
+<li><a href="concept-verb-patterns.html">Verb Patterns</a></li>
+<li><a href="concept-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="concept-parse-results.html">Parse Results</a></li>
+<li><a href="concept-pronoun-tracking.html">Pronoun Tracking</a></li>
+</ul>
+<p><strong>Guides</strong></p>
+<ul>
+<li><a href="guide-parsing-commands.html">Parsing Commands</a></li>
+<li><a href="guide-handling-disambiguation.html">Handling Disambiguation</a></li>
+<li><a href="guide-custom-vocabulary.html">Custom Vocabulary</a></li>
+<li><a href="guide-error-handling.html">Error Handling</a></li>
+<li><a href="guide-using-partial-matching.html">Using Partial Matching</a></li>
+</ul>
+<p><strong>API Reference</strong></p>
+<ul>
+<li><a href="api-parser-configuration.html">Parser Configuration</a></li>
+<li><a href="api-parser-instance.html">Parser Instance</a></li>
+<li><a href="api-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="api-parse-results.html">Parse Results</a></li>
+<li><a href="api-errors.html">Errors</a></li>
+<li><a href="api-tokenization.html">Tokenization</a></li>
+</ul>
+
+        </nav>
+      </aside>
+
+      <main class="manual-content">
+        <article class="manual-article">
+<h1>Tokenization API</h1>
+<p>Internal types for tokens produced by the parser&#39;s tokenizer. Exposed for advanced use cases like error position mapping.</p>
+<hr>
+<h2><code>Token</code></h2>
+<p>A single token from the input string.</p>
+<pre><code class="language-typescript">interface Token {
+  type: TokenType
+  value: string
+  original: string
+  start: number
+  end: number
+}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>type</code></td>
+<td><code>TokenType</code></td>
+<td>The type of token</td>
+</tr>
+<tr>
+<td><code>value</code></td>
+<td><code>string</code></td>
+<td>Normalized value (lowercase for words)</td>
+</tr>
+<tr>
+<td><code>original</code></td>
+<td><code>string</code></td>
+<td>Original text before normalization</td>
+</tr>
+<tr>
+<td><code>start</code></td>
+<td><code>number</code></td>
+<td>Start position in original input (0-indexed)</td>
+</tr>
+<tr>
+<td><code>end</code></td>
+<td><code>number</code></td>
+<td>End position in original input (exclusive)</td>
+</tr>
+</tbody></table>
+<p><strong>Example:</strong></p>
+<pre><code class="language-typescript">// Input: &quot;Get THE lamp&quot;
+// Tokens:
+[
+  { type: &#39;WORD&#39;, value: &#39;get&#39;, original: &#39;Get&#39;, start: 0, end: 3 },
+  { type: &#39;WORD&#39;, value: &#39;the&#39;, original: &#39;THE&#39;, start: 4, end: 7 },
+  { type: &#39;WORD&#39;, value: &#39;lamp&#39;, original: &#39;lamp&#39;, start: 8, end: 12 }
+]
+</code></pre>
+<hr>
+<h2><code>TokenType</code></h2>
+<p>Type of token produced by the tokenizer.</p>
+<pre><code class="language-typescript">type TokenType =
+  | &#39;WORD&#39;
+  | &#39;QUOTED_STRING&#39;
+  | &#39;NUMBER&#39;
+  | &#39;PUNCTUATION&#39;
+  | &#39;WHITESPACE&#39;
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>&#39;WORD&#39;</code></td>
+<td>Alphanumeric word</td>
+<td><code>get</code>, <code>lamp</code>, <code>café</code></td>
+</tr>
+<tr>
+<td><code>&#39;QUOTED_STRING&#39;</code></td>
+<td>Text in quotes</td>
+<td><code>&quot;hello world&quot;</code></td>
+</tr>
+<tr>
+<td><code>&#39;NUMBER&#39;</code></td>
+<td>Numeric value</td>
+<td><code>123</code>, <code>42</code></td>
+</tr>
+<tr>
+<td><code>&#39;PUNCTUATION&#39;</code></td>
+<td>Punctuation character</td>
+<td><code>.</code>, <code>!</code>, <code>,</code></td>
+</tr>
+<tr>
+<td><code>&#39;WHITESPACE&#39;</code></td>
+<td>Whitespace (usually skipped)</td>
+<td><code> </code>, <code>\t</code>, <code>\n</code></td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Position Mapping</h2>
+<p>Use token positions to map errors back to input:</p>
+<pre><code class="language-typescript">const input = &#39;get the unicorn from chest&#39;
+const result = parser.parse(input)
+
+if (result.type === &#39;unknown_noun&#39;) {
+  const position = result.position
+
+  // Highlight the problem word
+  const before = input.slice(0, position)
+  const word = result.noun
+  const after = input.slice(position + word.length)
+
+  console.log(`${before}[${word}]${after}`)
+  // &quot;get the [unicorn] from chest&quot;
+
+  // Or show a caret
+  console.log(input)
+  console.log(&#39; &#39;.repeat(position) + &#39;^&#39;.repeat(word.length))
+  // get the unicorn from chest
+  //         ^^^^^^^
+}
+</code></pre>
+<hr>
+<h2>Tokenization Behavior</h2>
+<p><strong>Word normalization:</strong></p>
+<ul>
+<li>Converted to lowercase</li>
+<li>Trailing punctuation stripped</li>
+<li>Unicode characters preserved</li>
+</ul>
+<p><strong>Quoted strings:</strong></p>
+<ul>
+<li>Delimiters: <code>&quot;</code> or <code>&#39;</code></li>
+<li>Escape sequences: <code>\&quot;</code>, <code>\&#39;</code>, <code>\\</code></li>
+<li>Value excludes quotes</li>
+</ul>
+<p><strong>Whitespace:</strong></p>
+<ul>
+<li>Tabs, newlines, spaces all treated as separators</li>
+<li>Multiple consecutive whitespace collapsed</li>
+<li>Not included in token output</li>
+</ul>
+<p><strong>Punctuation:</strong></p>
+<ul>
+<li>Stripped from word ends</li>
+<li>Standalone punctuation skipped</li>
+<li>Commas between items don&#39;t create lists</li>
+</ul>
+<p><strong>Examples:</strong></p>
+<pre><code class="language-typescript">// Lowercase
+&quot;GET LAMP&quot; → [{ value: &#39;get&#39; }, { value: &#39;lamp&#39; }]
+
+// Trailing punctuation stripped
+&quot;look.&quot; → [{ value: &#39;look&#39; }]
+
+// Quoted strings
+&#39;say &quot;Hello!&quot;&#39; → [{ value: &#39;say&#39; }, { value: &#39;Hello!&#39;, type: &#39;QUOTED_STRING&#39; }]
+
+// Unicode preserved
+&quot;get café&quot; → [{ value: &#39;get&#39; }, { value: &#39;café&#39; }]
+
+// Whitespace variations
+&quot;get\tlamp&quot; → [{ value: &#39;get&#39; }, { value: &#39;lamp&#39; }]
+&quot;get\nlamp&quot; → [{ value: &#39;get&#39; }, { value: &#39;lamp&#39; }]
+</code></pre>
+<hr>
+<h2>Use Cases</h2>
+<p><strong>Error display:</strong>
+Use <code>position</code> from <code>UnknownNounResult</code> or <code>ParseErrorResult</code> to highlight problems in the original input.</p>
+<p><strong>Custom preprocessing:</strong>
+If you need to normalize or transform input before parsing, token positions let you map results back to the original.</p>
+<p><strong>Debugging:</strong>
+Understanding tokenization helps diagnose why certain inputs parse unexpectedly.</p>
+
+        </article>
+      </main>
+    </div>
+  </div>
+</body>
+</html>
