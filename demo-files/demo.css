@@ -439,17 +439,26 @@ textarea.input {
   font-weight: 600;
 }
 
-.test-runner-actions {
-  display: flex;
-  gap: var(--space-sm);
-}
-
 .test-runner-content {
   padding: var(--space-lg);
 }
 
+/* Control bar layout: progress bar + buttons in horizontal row */
+.test-control-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
 .test-progress {
-  margin-bottom: var(--space-lg);
+  flex: 1;  /* Progress bar fills available space */
+}
+
+.test-runner-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;  /* Buttons maintain their size */
 }
 
 .test-progress-bar {
@@ -557,6 +566,34 @@ textarea.input {
 }
 
 .test-summary-item.skipped {
+  color: var(--text-muted);
+}
+
+/* Integrity test styling */
+.test-name.integrity-test {
+  color: var(--accent-purple);
+  font-weight: 500;
+}
+
+.test-item[data-category="integrity"] .test-name {
+  color: var(--accent-purple);
+  font-weight: 500;
+}
+
+/* Demo phase styling */
+.test-item.demo-phase .test-name {
+  color: var(--accent-blue);
+  font-weight: 500;
+}
+
+.test-item.demo-step {
+  opacity: 0.8;
+}
+
+/* Test output placeholder */
+.test-output-placeholder {
+  padding: var(--space-xl);
+  text-align: center;
   color: var(--text-muted);
 }
 
@@ -1056,6 +1093,34 @@ textarea.input {
 @keyframes pronoun-pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(63, 185, 80, 0.4); }
   50% { box-shadow: 0 0 0 8px rgba(63, 185, 80, 0); }
+}
+
+/* Token chip animations */
+.token-chip {
+  animation: token-appear 0.3s ease forwards;
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+@keyframes token-appear {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Command card animations */
+.command-card {
+  animation: card-slide-in 0.3s ease forwards;
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+@keyframes card-slide-in {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .pronoun-icon {
