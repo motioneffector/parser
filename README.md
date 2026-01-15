@@ -19,7 +19,7 @@ A natural language command parser for text adventures and interactive fiction.
 - **Partial Matching** - "exa lamp" matches "examine lamp"
 - **Position Tracking** - Token positions for error reporting
 
-[Read the full manual →](https://github.com/motioneffector/parser/wiki)
+[Read the full manual →](https://motioneffector.github.io/parser/manual/)
 
 ## Quick Start
 
