@@ -564,11 +564,24 @@ export function createParser(options: ParserOptions): Parser {
     lastReferent = null
   }
 
+  /**
+   * Get a read-only copy of the current vocabulary
+   */
+  function getVocabulary(): Vocabulary {
+    return {
+      verbs: [...vocabulary.verbs],
+      directions: [...vocabulary.directions],
+      prepositions: [...vocabulary.prepositions],
+      articles: [...vocabulary.articles],
+    }
+  }
+
   return {
     parse,
     addVerb,
     addDirection,
     clearPronoun,
+    getVocabulary,
   }
 }
 

@@ -252,4 +252,7 @@ export interface Parser {
 
   /** Clear the pronoun reference (for "it") */
   clearPronoun(): void
+
+  /** Get a read-only copy of the current vocabulary */
+  getVocabulary(): Vocabulary
 }
