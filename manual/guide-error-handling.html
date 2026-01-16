@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Error Handling - @motioneffector/parser</title>
+  <link rel="stylesheet" href="../demo-files/demo.css">
+  <link rel="stylesheet" href="manual.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());</script>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1 class="header-title">@motioneffector/parser</h1>
+      <p class="header-description">Documentation</p>
+      <nav class="header-links">
+        <a href="../index.html" class="header-link">Demo</a>
+        <a href="https://www.npmjs.com/package/@motioneffector/parser" class="header-link">npm</a>
+        <a href="https://github.com/motioneffector/parser" class="header-link">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="manual-layout">
+      <aside class="manual-sidebar">
+        <nav class="sidebar-nav">
+<p><strong><a href="index.html">@motioneffector/parser</a></strong></p>
+<p><strong>Getting Started</strong></p>
+<ul>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="your-first-parse.html">Your First Parse</a></li>
+</ul>
+<p><strong>Core Concepts</strong></p>
+<ul>
+<li><a href="concept-vocabulary.html">Vocabulary</a></li>
+<li><a href="concept-verb-patterns.html">Verb Patterns</a></li>
+<li><a href="concept-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="concept-parse-results.html">Parse Results</a></li>
+<li><a href="concept-pronoun-tracking.html">Pronoun Tracking</a></li>
+</ul>
+<p><strong>Guides</strong></p>
+<ul>
+<li><a href="guide-parsing-commands.html">Parsing Commands</a></li>
+<li><a href="guide-handling-disambiguation.html">Handling Disambiguation</a></li>
+<li><a href="guide-custom-vocabulary.html">Custom Vocabulary</a></li>
+<li><a href="guide-error-handling.html">Error Handling</a></li>
+<li><a href="guide-using-partial-matching.html">Using Partial Matching</a></li>
+</ul>
+<p><strong>API Reference</strong></p>
+<ul>
+<li><a href="api-parser-configuration.html">Parser Configuration</a></li>
+<li><a href="api-parser-instance.html">Parser Instance</a></li>
+<li><a href="api-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="api-parse-results.html">Parse Results</a></li>
+<li><a href="api-errors.html">Errors</a></li>
+<li><a href="api-tokenization.html">Tokenization</a></li>
+</ul>
+
+        </nav>
+      </aside>
+
+      <main class="manual-content">
+        <article class="manual-article">
+<h1>Error Handling</h1>
+<p>Display helpful messages when parsing fails. This guide covers each error type and how to respond with clear, player-friendly feedback.</p>
+<h2>Prerequisites</h2>
+<p>Before starting, you should:</p>
+<ul>
+<li><a href="concept-parse-results.html">Understand parse results</a></li>
+</ul>
+<h2>Overview</h2>
+<p>We&#39;ll handle errors by:</p>
+<ol>
+<li>Identifying each result type</li>
+<li>Crafting appropriate responses</li>
+<li>Using position information for highlighting</li>
+<li>Providing helpful suggestions</li>
+</ol>
+<h2>Step 1: Identify Error Types</h2>
+<p>Non-command results indicate something went wrong:</p>
+<pre><code class="language-typescript">const result = parser.parse(input)
+
+switch (result.type) {
+  case &#39;command&#39;:
+    // Success - not an error
+    break
+
+  case &#39;unknown_verb&#39;:
+    // First word not recognized
+    break
+
+  case &#39;unknown_noun&#39;:
+    // Entity not found by resolver
+    break
+
+  case &#39;ambiguous&#39;:
+    // Multiple entities matched (covered in disambiguation guide)
+    break
+
+  case &#39;parse_error&#39;:
+    // Structural problem with input
+    break
+}
+</code></pre>
+<h2>Step 2: Handle Unknown Verb</h2>
+<p>The player used a word the parser doesn&#39;t recognize as a verb or direction:</p>
+<pre><code class="language-typescript">if (result.type === &#39;unknown_verb&#39;) {
+  // Simple response
+  return `I don&#39;t understand &quot;${result.verb}&quot;.`
+
+  // With suggestion
+  return `I don&#39;t know how to &quot;${result.verb}&quot;. Try LOOK, GET, or GO.`
+
+  // With help pointer
+  return `&quot;${result.verb}&quot; isn&#39;t a command I know. Type HELP for a list of commands.`
+}
+</code></pre>
+<h2>Step 3: Handle Unknown Noun</h2>
+<p>The resolver returned an empty array—the entity doesn&#39;t exist in scope:</p>
+<pre><code class="language-typescript">if (result.type === &#39;unknown_noun&#39;) {
+  // Classic text adventure response
+  return `You don&#39;t see any &quot;${result.noun}&quot; here.`
+
+  // With context
+  return `There&#39;s no ${result.noun} in the ${currentRoom.name}.`
+
+  // With hint
+  return `I don&#39;t know what &quot;${result.noun}&quot; refers to. Try LOOK to see what&#39;s here.`
+}
+</code></pre>
+<h2>Step 4: Handle Parse Errors</h2>
+<p>Structural problems like missing arguments:</p>
+<pre><code class="language-typescript">if (result.type === &#39;parse_error&#39;) {
+  // Use the built-in message
+  return result.message
+
+  // Or wrap it
+  return `I didn&#39;t understand that. ${result.message}`
+}
+</code></pre>
+<p>Common parse errors:</p>
+<ul>
+<li>&quot;Expected object after GET&quot; - verb needs subject but none provided</li>
+<li>&quot;Expected direction after GO&quot; - go without a direction</li>
+<li>&quot;Expected preposition and target&quot; - PUT without destination</li>
+<li>&quot;Cannot use &#39;it&#39; without a previous referent&quot; - pronoun with no antecedent</li>
+</ul>
+<h2>Step 5: Use Position Information</h2>
+<p>Both <code>unknown_noun</code> and <code>parse_error</code> include a position for highlighting:</p>
+<pre><code class="language-typescript">if (result.type === &#39;unknown_noun&#39;) {
+  const before = input.slice(0, result.position)
+  const problem = result.noun
+  const after = input.slice(result.position + problem.length)
+
+  // Show with caret
+  console.log(input)
+  console.log(&#39; &#39;.repeat(result.position) + &#39;^&#39;.repeat(problem.length))
+
+  // Or highlight
+  return `${before}[${problem}]${after} - I don&#39;t see that here.`
+}
+</code></pre>
+<h2>Complete Example</h2>
+<pre><code class="language-typescript">import { createParser, ParseResult } from &#39;@motioneffector/parser&#39;
+
+const parser = createParser({
+  resolver: (noun) =&gt; {
+    const items: Record&lt;string, { id: string }&gt; = {
+      lamp: { id: &#39;lamp-1&#39; },
+      key: { id: &#39;key-1&#39; },
+    }
+    return items[noun] ? [items[noun]] : []
+  }
+})
+
+function respond(input: string): string {
+  const result = parser.parse(input)
+
+  switch (result.type) {
+    case &#39;command&#39;:
+      return executeCommand(result.command)
+
+    case &#39;unknown_verb&#39;:
+      return handleUnknownVerb(result.verb)
+
+    case &#39;unknown_noun&#39;:
+      return handleUnknownNoun(result.noun, input, result.position)
+
+    case &#39;ambiguous&#39;:
+      return handleAmbiguous(result)
+
+    case &#39;parse_error&#39;:
+      return handleParseError(result.message, input, result.position)
+  }
+}
+
+function handleUnknownVerb(verb: string): string {
+  const suggestions: Record&lt;string, string&gt; = {
+    &#39;grab&#39;: &quot;Try GET instead.&quot;,
+    &#39;walk&#39;: &quot;Try GO followed by a direction.&quot;,
+    &#39;move&#39;: &quot;Try GO followed by a direction.&quot;,
+    &#39;use&#39;: &quot;Try a more specific verb like OPEN, UNLOCK, or PUT.&quot;,
+  }
+
+  const suggestion = suggestions[verb.toLowerCase()]
+  if (suggestion) {
+    return `I don&#39;t understand &quot;${verb}&quot;. ${suggestion}`
+  }
+
+  return `I don&#39;t understand &quot;${verb}&quot;. Type HELP for available commands.`
+}
+
+function handleUnknownNoun(noun: string, input: string, position: number): string {
+  // Check for common misspellings or alternatives
+  const alternatives: Record&lt;string, string&gt; = {
+    &#39;lantern&#39;: &#39;lamp&#39;,
+    &#39;light&#39;: &#39;lamp&#39;,
+    &#39;keys&#39;: &#39;key&#39;,
+  }
+
+  const alt = alternatives[noun.toLowerCase()]
+  if (alt) {
+    return `I don&#39;t see any &quot;${noun}&quot; here. Did you mean &quot;${alt}&quot;?`
+  }
+
+  return `You don&#39;t see any &quot;${noun}&quot; here.`
+}
+
+function handleAmbiguous(result: { original: string; candidates: Array&lt;{ id: string }&gt; }): string {
+  const options = result.candidates
+    .map((c, i) =&gt; `${i + 1}) ${c.id}`)
+    .join(&#39;, &#39;)
+  return `Which ${result.original}? ${options}`
+}
+
+function handleParseError(message: string, input: string, position: number): string {
+  // Make messages more conversational
+  const friendly: Record&lt;string, string&gt; = {
+    &#39;Empty input&#39;: &quot;I didn&#39;t catch that. What would you like to do?&quot;,
+  }
+
+  return friendly[message] || message
+}
+
+function executeCommand(cmd: { verb: string }): string {
+  return `You ${cmd.verb.toLowerCase()}.`
+}
+
+// Test various errors
+console.log(respond(&#39;dance&#39;))           // Unknown verb
+console.log(respond(&#39;get unicorn&#39;))     // Unknown noun
+console.log(respond(&#39;put key&#39;))         // Parse error
+console.log(respond(&#39;&#39;))                // Empty input
+console.log(respond(&#39;grab lamp&#39;))       // Unknown verb with suggestion
+console.log(respond(&#39;get lantern&#39;))     // Unknown noun with alternative
+</code></pre>
+<h2>Variations</h2>
+<h3>Contextual Error Messages</h3>
+<p>Adjust messages based on game state:</p>
+<pre><code class="language-typescript">function handleUnknownNoun(noun: string): string {
+  // Check if item exists elsewhere
+  const item = findItemAnywhere(noun)
+
+  if (item) {
+    if (item.location === &#39;inventory&#39;) {
+      return `You&#39;re already carrying the ${noun}.`
+    }
+    return `The ${noun} is in the ${item.location}, not here.`
+  }
+
+  return `You don&#39;t see any &quot;${noun}&quot; here.`
+}
+</code></pre>
+<h3>Typo Detection</h3>
+<p>Suggest corrections for close matches:</p>
+<pre><code class="language-typescript">function handleUnknownVerb(verb: string): string {
+  const knownVerbs = [&#39;get&#39;, &#39;look&#39;, &#39;open&#39;, &#39;examine&#39;, &#39;drop&#39;]
+  const similar = knownVerbs.find(v =&gt;
+    levenshteinDistance(v, verb.toLowerCase()) &lt;= 2
+  )
+
+  if (similar) {
+    return `Did you mean &quot;${similar}&quot;?`
+  }
+
+  return `I don&#39;t understand &quot;${verb}&quot;.`
+}
+</code></pre>
+<h3>Verbose Mode</h3>
+<p>Show more detail for debugging:</p>
+<pre><code class="language-typescript">function respond(input: string, verbose = false): string {
+  const result = parser.parse(input)
+
+  if (result.type === &#39;parse_error&#39; &amp;&amp; verbose) {
+    return `Error at position ${result.position}: ${result.message}\n` +
+           `Input: ${input}\n` +
+           `       ${&#39; &#39;.repeat(result.position)}^`
+  }
+
+  // ... normal handling
+}
+</code></pre>
+<h2>Troubleshooting</h2>
+<h3>Unhelpful Error Messages</h3>
+<p><strong>Symptom:</strong> Players don&#39;t understand what went wrong</p>
+<p><strong>Cause:</strong> Using raw technical messages</p>
+<p><strong>Solution:</strong> Map common errors to friendly explanations</p>
+<h3>Missing Position</h3>
+<p><strong>Symptom:</strong> Position is 0 when it shouldn&#39;t be</p>
+<p><strong>Cause:</strong> Error occurred at start of input</p>
+<p><strong>Solution:</strong> Position 0 is valid—it means the problem is at the beginning</p>
+<h2>See Also</h2>
+<ul>
+<li><strong><a href="concept-parse-results.html">Parse Results</a></strong> - All result types</li>
+<li><strong><a href="guide-handling-disambiguation.html">Handling Disambiguation</a></strong> - The ambiguous case</li>
+<li><strong><a href="api-parse-results.html">Parse Results API</a></strong> - Full interfaces</li>
+</ul>
+
+        </article>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

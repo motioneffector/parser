@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parser Instance API - @motioneffector/parser</title>
+  <link rel="stylesheet" href="../demo-files/demo.css">
+  <link rel="stylesheet" href="manual.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());</script>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1 class="header-title">@motioneffector/parser</h1>
+      <p class="header-description">Documentation</p>
+      <nav class="header-links">
+        <a href="../index.html" class="header-link">Demo</a>
+        <a href="https://www.npmjs.com/package/@motioneffector/parser" class="header-link">npm</a>
+        <a href="https://github.com/motioneffector/parser" class="header-link">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="manual-layout">
+      <aside class="manual-sidebar">
+        <nav class="sidebar-nav">
+<p><strong><a href="index.html">@motioneffector/parser</a></strong></p>
+<p><strong>Getting Started</strong></p>
+<ul>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="your-first-parse.html">Your First Parse</a></li>
+</ul>
+<p><strong>Core Concepts</strong></p>
+<ul>
+<li><a href="concept-vocabulary.html">Vocabulary</a></li>
+<li><a href="concept-verb-patterns.html">Verb Patterns</a></li>
+<li><a href="concept-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="concept-parse-results.html">Parse Results</a></li>
+<li><a href="concept-pronoun-tracking.html">Pronoun Tracking</a></li>
+</ul>
+<p><strong>Guides</strong></p>
+<ul>
+<li><a href="guide-parsing-commands.html">Parsing Commands</a></li>
+<li><a href="guide-handling-disambiguation.html">Handling Disambiguation</a></li>
+<li><a href="guide-custom-vocabulary.html">Custom Vocabulary</a></li>
+<li><a href="guide-error-handling.html">Error Handling</a></li>
+<li><a href="guide-using-partial-matching.html">Using Partial Matching</a></li>
+</ul>
+<p><strong>API Reference</strong></p>
+<ul>
+<li><a href="api-parser-configuration.html">Parser Configuration</a></li>
+<li><a href="api-parser-instance.html">Parser Instance</a></li>
+<li><a href="api-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="api-parse-results.html">Parse Results</a></li>
+<li><a href="api-errors.html">Errors</a></li>
+<li><a href="api-tokenization.html">Tokenization</a></li>
+</ul>
+
+        </nav>
+      </aside>
+
+      <main class="manual-content">
+        <article class="manual-article">
+<h1>Parser Instance API</h1>
+<p>Methods available on a parser instance returned by <code>createParser()</code>.</p>
+<hr>
+<h2><code>parse()</code></h2>
+<p>Parses a command string and returns a result.</p>
+<p><strong>Signature:</strong></p>
+<pre><code class="language-typescript">parse(input: string, options?: ParseOptions): ParseResult
+</code></pre>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>input</code></td>
+<td><code>string</code></td>
+<td>Yes</td>
+<td>The player&#39;s command string</td>
+</tr>
+<tr>
+<td><code>options</code></td>
+<td><code>ParseOptions</code></td>
+<td>No</td>
+<td>Parsing options including scope</td>
+</tr>
+</tbody></table>
+<p><strong>Returns:</strong> <code>ParseResult</code> — A discriminated union indicating the parse outcome.</p>
+<p><strong>Example:</strong></p>
+<pre><code class="language-typescript">const result = parser.parse(&#39;get the lamp&#39;, {
+  scope: {
+    room: currentRoom,
+    inventory: playerInventory
+  }
+})
+
+if (result.type === &#39;command&#39;) {
+  console.log(result.command.verb)  // &quot;GET&quot;
+}
+</code></pre>
+<p><strong>Throws:</strong></p>
+<ul>
+<li><code>ValidationError</code> — When input exceeds maximum length (1,000,000 characters)</li>
+</ul>
+<hr>
+<h2><code>addVerb()</code></h2>
+<p>Adds a custom verb definition to this parser instance.</p>
+<p><strong>Signature:</strong></p>
+<pre><code class="language-typescript">addVerb(definition: VerbDefinition): void
+</code></pre>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>definition</code></td>
+<td><code>VerbDefinition</code></td>
+<td>Yes</td>
+<td>The verb to add</td>
+</tr>
+</tbody></table>
+<p><strong>Returns:</strong> <code>void</code></p>
+<p><strong>Example:</strong></p>
+<pre><code class="language-typescript">parser.addVerb({
+  canonical: &#39;CAST&#39;,
+  synonyms: [&#39;cast&#39;, &#39;invoke&#39;],
+  pattern: &#39;subject&#39;
+})
+
+const result = parser.parse(&#39;cast fireball&#39;)
+// { type: &#39;command&#39;, command: { verb: &#39;CAST&#39;, ... } }
+</code></pre>
+<p><strong>Notes:</strong></p>
+<ul>
+<li>Added verbs only affect this parser instance</li>
+<li>Does not modify the default vocabulary</li>
+<li>Synonyms must be lowercase</li>
+</ul>
+<hr>
+<h2><code>addDirection()</code></h2>
+<p>Adds a custom direction definition to this parser instance.</p>
+<p><strong>Signature:</strong></p>
+<pre><code class="language-typescript">addDirection(definition: DirectionDefinition): void
+</code></pre>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>definition</code></td>
+<td><code>DirectionDefinition</code></td>
+<td>Yes</td>
+<td>The direction to add</td>
+</tr>
+</tbody></table>
+<p><strong>Returns:</strong> <code>void</code></p>
+<p><strong>Example:</strong></p>
+<pre><code class="language-typescript">parser.addDirection({
+  canonical: &#39;PORTAL&#39;,
+  aliases: [&#39;portal&#39;, &#39;p&#39;]
+})
+
+const result = parser.parse(&#39;portal&#39;)
+// { type: &#39;command&#39;, command: { verb: &#39;GO&#39;, direction: &#39;PORTAL&#39; } }
+</code></pre>
+<p><strong>Notes:</strong></p>
+<ul>
+<li>Added directions only affect this parser instance</li>
+<li>Directions can be used alone or with GO</li>
+<li>Aliases must be lowercase</li>
+</ul>
+<hr>
+<h2><code>clearPronoun()</code></h2>
+<p>Clears the pronoun reference (&quot;it&quot;) tracked by this parser.</p>
+<p><strong>Signature:</strong></p>
+<pre><code class="language-typescript">clearPronoun(): void
+</code></pre>
+<p><strong>Returns:</strong> <code>void</code></p>
+<p><strong>Example:</strong></p>
+<pre><code class="language-typescript">parser.parse(&#39;get lamp&#39;)      // Sets &quot;it&quot; = lamp
+parser.parse(&#39;examine it&#39;)    // Works, examines lamp
+
+parser.clearPronoun()
+
+parser.parse(&#39;examine it&#39;)    // parse_error: no referent
+</code></pre>
+<p><strong>Notes:</strong></p>
+<ul>
+<li>Pronoun also clears automatically when <code>scope.room</code> changes</li>
+<li>Use this for manual control, e.g., after time passes or scene change</li>
+</ul>
+<hr>
+<h2>Types</h2>
+<h3><code>ParseOptions</code></h3>
+<p>Options for a single parse operation.</p>
+<pre><code class="language-typescript">interface ParseOptions {
+  scope?: ResolverScope
+}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>scope</code></td>
+<td><code>ResolverScope</code></td>
+<td>No</td>
+<td>Context passed to the resolver</td>
+</tr>
+</tbody></table>
+<hr>
+<h3><code>ResolverScope</code></h3>
+<p>Scope information passed to the resolver function.</p>
+<pre><code class="language-typescript">interface ResolverScope {
+  room?: unknown
+  inventory?: unknown
+  [key: string]: unknown
+}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>room</code></td>
+<td><code>unknown</code></td>
+<td>No</td>
+<td>Current room or location. Changes clear pronoun.</td>
+</tr>
+<tr>
+<td><code>inventory</code></td>
+<td><code>unknown</code></td>
+<td>No</td>
+<td>Player&#39;s inventory</td>
+</tr>
+<tr>
+<td><code>[key]</code></td>
+<td><code>unknown</code></td>
+<td>No</td>
+<td>Any additional scope data</td>
+</tr>
+</tbody></table>
+<p><strong>Example:</strong></p>
+<pre><code class="language-typescript">parser.parse(&#39;get lamp&#39;, {
+  scope: {
+    room: { id: &#39;room-1&#39;, items: [...] },
+    inventory: [...],
+    npcPresent: true,
+    lightLevel: &#39;dim&#39;
+  }
+})
+</code></pre>
+<hr>
+<h3><code>Parser</code></h3>
+<p>The parser interface returned by <code>createParser()</code>.</p>
+<pre><code class="language-typescript">interface Parser {
+  parse(input: string, options?: ParseOptions): ParseResult
+  addVerb(definition: VerbDefinition): void
+  addDirection(definition: DirectionDefinition): void
+  clearPronoun(): void
+}
+</code></pre>
+
+        </article>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

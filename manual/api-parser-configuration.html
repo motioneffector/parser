@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parser Configuration API - @motioneffector/parser</title>
+  <link rel="stylesheet" href="../demo-files/demo.css">
+  <link rel="stylesheet" href="manual.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());</script>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1 class="header-title">@motioneffector/parser</h1>
+      <p class="header-description">Documentation</p>
+      <nav class="header-links">
+        <a href="../index.html" class="header-link">Demo</a>
+        <a href="https://www.npmjs.com/package/@motioneffector/parser" class="header-link">npm</a>
+        <a href="https://github.com/motioneffector/parser" class="header-link">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="manual-layout">
+      <aside class="manual-sidebar">
+        <nav class="sidebar-nav">
+<p><strong><a href="index.html">@motioneffector/parser</a></strong></p>
+<p><strong>Getting Started</strong></p>
+<ul>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="your-first-parse.html">Your First Parse</a></li>
+</ul>
+<p><strong>Core Concepts</strong></p>
+<ul>
+<li><a href="concept-vocabulary.html">Vocabulary</a></li>
+<li><a href="concept-verb-patterns.html">Verb Patterns</a></li>
+<li><a href="concept-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="concept-parse-results.html">Parse Results</a></li>
+<li><a href="concept-pronoun-tracking.html">Pronoun Tracking</a></li>
+</ul>
+<p><strong>Guides</strong></p>
+<ul>
+<li><a href="guide-parsing-commands.html">Parsing Commands</a></li>
+<li><a href="guide-handling-disambiguation.html">Handling Disambiguation</a></li>
+<li><a href="guide-custom-vocabulary.html">Custom Vocabulary</a></li>
+<li><a href="guide-error-handling.html">Error Handling</a></li>
+<li><a href="guide-using-partial-matching.html">Using Partial Matching</a></li>
+</ul>
+<p><strong>API Reference</strong></p>
+<ul>
+<li><a href="api-parser-configuration.html">Parser Configuration</a></li>
+<li><a href="api-parser-instance.html">Parser Instance</a></li>
+<li><a href="api-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="api-parse-results.html">Parse Results</a></li>
+<li><a href="api-errors.html">Errors</a></li>
+<li><a href="api-tokenization.html">Tokenization</a></li>
+</ul>
+
+        </nav>
+      </aside>
+
+      <main class="manual-content">
+        <article class="manual-article">
+<h1>Parser Configuration API</h1>
+<p>Functions and types for creating and configuring parser instances.</p>
+<hr>
+<h2><code>createParser()</code></h2>
+<p>Creates a new parser instance with the specified configuration.</p>
+<p><strong>Signature:</strong></p>
+<pre><code class="language-typescript">function createParser(options: ParserOptions): Parser
+</code></pre>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>options</code></td>
+<td><code>ParserOptions</code></td>
+<td>Yes</td>
+<td>Configuration options for the parser</td>
+</tr>
+</tbody></table>
+<p><strong>Returns:</strong> <code>Parser</code> — A parser instance with <code>parse</code>, <code>addVerb</code>, <code>addDirection</code>, and <code>clearPronoun</code> methods.</p>
+<p><strong>Example:</strong></p>
+<pre><code class="language-typescript">import { createParser } from &#39;@motioneffector/parser&#39;
+
+const parser = createParser({
+  resolver: (noun, adjectives, scope) =&gt; {
+    // Return matching entities from your game state
+    return [{ id: &#39;example-1&#39; }]
+  }
+})
+</code></pre>
+<p><strong>Throws:</strong></p>
+<ul>
+<li><code>ValidationError</code> — When resolver is not a function</li>
+</ul>
+<hr>
+<h2>Types</h2>
+<h3><code>ParserOptions</code></h3>
+<p>Configuration options for creating a parser.</p>
+<pre><code class="language-typescript">interface ParserOptions {
+  resolver: Resolver
+  vocabulary?: Partial&lt;Vocabulary&gt; &amp; { extend?: boolean }
+  partialMatch?: boolean
+  minPartialLength?: number
+}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>resolver</code></td>
+<td><code>Resolver</code></td>
+<td>Yes</td>
+<td>Function that resolves nouns to game entities</td>
+</tr>
+<tr>
+<td><code>vocabulary</code></td>
+<td><code>Partial&lt;Vocabulary&gt; &amp; { extend?: boolean }</code></td>
+<td>No</td>
+<td>Custom vocabulary configuration</td>
+</tr>
+<tr>
+<td><code>partialMatch</code></td>
+<td><code>boolean</code></td>
+<td>No</td>
+<td>Enable partial word matching. Default: <code>true</code></td>
+</tr>
+<tr>
+<td><code>minPartialLength</code></td>
+<td><code>number</code></td>
+<td>No</td>
+<td>Minimum characters for partial match. Default: <code>3</code></td>
+</tr>
+</tbody></table>
+<hr>
+<h3><code>Vocabulary</code></h3>
+<p>Complete vocabulary defining all recognized words.</p>
+<pre><code class="language-typescript">interface Vocabulary {
+  verbs: VerbDefinition[]
+  directions: DirectionDefinition[]
+  prepositions: string[]
+  articles: string[]
+}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>verbs</code></td>
+<td><code>VerbDefinition[]</code></td>
+<td>Yes</td>
+<td>All verb definitions</td>
+</tr>
+<tr>
+<td><code>directions</code></td>
+<td><code>DirectionDefinition[]</code></td>
+<td>Yes</td>
+<td>All direction definitions</td>
+</tr>
+<tr>
+<td><code>prepositions</code></td>
+<td><code>string[]</code></td>
+<td>Yes</td>
+<td>Recognized prepositions (with, to, in, etc.)</td>
+</tr>
+<tr>
+<td><code>articles</code></td>
+<td><code>string[]</code></td>
+<td>Yes</td>
+<td>Articles to strip (the, a, an)</td>
+</tr>
+</tbody></table>
+<p>When using <code>vocabulary.extend</code>:</p>
+<ul>
+<li><code>true</code> (default): Merges with default vocabulary</li>
+<li><code>false</code>: Replaces default vocabulary entirely</li>
+</ul>
+<hr>
+<h3><code>VerbDefinition</code></h3>
+<p>Definition of a verb with its canonical form, synonyms, and pattern.</p>
+<pre><code class="language-typescript">interface VerbDefinition {
+  canonical: string
+  synonyms: string[]
+  pattern: VerbPattern
+}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>canonical</code></td>
+<td><code>string</code></td>
+<td>Yes</td>
+<td>Uppercase canonical form (e.g., <code>&quot;GET&quot;</code>)</td>
+</tr>
+<tr>
+<td><code>synonyms</code></td>
+<td><code>string[]</code></td>
+<td>Yes</td>
+<td>Lowercase synonyms including base form (e.g., <code>[&quot;get&quot;, &quot;take&quot;, &quot;grab&quot;]</code>)</td>
+</tr>
+<tr>
+<td><code>pattern</code></td>
+<td><code>VerbPattern</code></td>
+<td>Yes</td>
+<td>What arguments this verb expects</td>
+</tr>
+</tbody></table>
+<p><strong>Example:</strong></p>
+<pre><code class="language-typescript">const castVerb: VerbDefinition = {
+  canonical: &#39;CAST&#39;,
+  synonyms: [&#39;cast&#39;, &#39;invoke&#39;, &#39;conjure&#39;],
+  pattern: &#39;subject&#39;
+}
+</code></pre>
+<hr>
+<h3><code>VerbPattern</code></h3>
+<p>Pattern that defines what arguments a verb expects.</p>
+<pre><code class="language-typescript">type VerbPattern = &#39;none&#39; | &#39;subject&#39; | &#39;subject_object&#39; | &#39;direction&#39; | &#39;text&#39;
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>&#39;none&#39;</code></td>
+<td>No arguments</td>
+<td>look, inventory, quit</td>
+</tr>
+<tr>
+<td><code>&#39;subject&#39;</code></td>
+<td>One entity (optional preposition + object)</td>
+<td>get lamp, unlock door with key</td>
+</tr>
+<tr>
+<td><code>&#39;subject_object&#39;</code></td>
+<td>Two entities with required preposition</td>
+<td>put key in chest</td>
+</tr>
+<tr>
+<td><code>&#39;direction&#39;</code></td>
+<td>A direction</td>
+<td>go north</td>
+</tr>
+<tr>
+<td><code>&#39;text&#39;</code></td>
+<td>Everything after verb as raw text</td>
+<td>say hello world</td>
+</tr>
+</tbody></table>
+<hr>
+<h3><code>DirectionDefinition</code></h3>
+<p>Definition of a direction with its canonical form and aliases.</p>
+<pre><code class="language-typescript">interface DirectionDefinition {
+  canonical: string
+  aliases: string[]
+}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>canonical</code></td>
+<td><code>string</code></td>
+<td>Yes</td>
+<td>Uppercase canonical direction (e.g., <code>&quot;NORTH&quot;</code>)</td>
+</tr>
+<tr>
+<td><code>aliases</code></td>
+<td><code>string[]</code></td>
+<td>Yes</td>
+<td>Ways to refer to this direction (e.g., <code>[&quot;north&quot;, &quot;n&quot;]</code>)</td>
+</tr>
+</tbody></table>
+<p><strong>Example:</strong></p>
+<pre><code class="language-typescript">const portalDirection: DirectionDefinition = {
+  canonical: &#39;PORTAL&#39;,
+  aliases: [&#39;portal&#39;, &#39;p&#39;, &#39;teleport&#39;]
+}
+</code></pre>
+<hr>
+<h2>Default Vocabulary</h2>
+<p>The parser includes these defaults:</p>
+<p><strong>Verbs (27):</strong></p>
+<ul>
+<li>Movement: GO, ENTER, EXIT, CLIMB</li>
+<li>Interaction: GET, DROP, PUT, GIVE, THROW, OPEN, CLOSE, LOCK, UNLOCK</li>
+<li>Examination: LOOK, EXAMINE, SEARCH, READ</li>
+<li>Communication: SAY, SHOUT, TALK, ASK, TELL</li>
+<li>Combat: ATTACK, KILL, FIGHT</li>
+<li>Meta: INVENTORY, SCORE, SAVE, LOAD, QUIT, HELP</li>
+</ul>
+<p><strong>Directions (12):</strong>
+NORTH (n), SOUTH (s), EAST (e), WEST (w), NORTHEAST (ne), NORTHWEST (nw), SOUTHEAST (se), SOUTHWEST (sw), UP (u), DOWN (d), IN, OUT</p>
+<p><strong>Prepositions (9):</strong>
+with, to, at, in, on, from, into, onto, about</p>
+<p><strong>Articles (3):</strong>
+the, a, an</p>
+
+        </article>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

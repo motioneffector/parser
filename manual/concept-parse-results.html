@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parse Results - @motioneffector/parser</title>
+  <link rel="stylesheet" href="../demo-files/demo.css">
+  <link rel="stylesheet" href="manual.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());</script>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1 class="header-title">@motioneffector/parser</h1>
+      <p class="header-description">Documentation</p>
+      <nav class="header-links">
+        <a href="../index.html" class="header-link">Demo</a>
+        <a href="https://www.npmjs.com/package/@motioneffector/parser" class="header-link">npm</a>
+        <a href="https://github.com/motioneffector/parser" class="header-link">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="manual-layout">
+      <aside class="manual-sidebar">
+        <nav class="sidebar-nav">
+<p><strong><a href="index.html">@motioneffector/parser</a></strong></p>
+<p><strong>Getting Started</strong></p>
+<ul>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="your-first-parse.html">Your First Parse</a></li>
+</ul>
+<p><strong>Core Concepts</strong></p>
+<ul>
+<li><a href="concept-vocabulary.html">Vocabulary</a></li>
+<li><a href="concept-verb-patterns.html">Verb Patterns</a></li>
+<li><a href="concept-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="concept-parse-results.html">Parse Results</a></li>
+<li><a href="concept-pronoun-tracking.html">Pronoun Tracking</a></li>
+</ul>
+<p><strong>Guides</strong></p>
+<ul>
+<li><a href="guide-parsing-commands.html">Parsing Commands</a></li>
+<li><a href="guide-handling-disambiguation.html">Handling Disambiguation</a></li>
+<li><a href="guide-custom-vocabulary.html">Custom Vocabulary</a></li>
+<li><a href="guide-error-handling.html">Error Handling</a></li>
+<li><a href="guide-using-partial-matching.html">Using Partial Matching</a></li>
+</ul>
+<p><strong>API Reference</strong></p>
+<ul>
+<li><a href="api-parser-configuration.html">Parser Configuration</a></li>
+<li><a href="api-parser-instance.html">Parser Instance</a></li>
+<li><a href="api-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="api-parse-results.html">Parse Results</a></li>
+<li><a href="api-errors.html">Errors</a></li>
+<li><a href="api-tokenization.html">Tokenization</a></li>
+</ul>
+
+        </nav>
+      </aside>
+
+      <main class="manual-content">
+        <article class="manual-article">
+<h1>Parse Results</h1>
+<p>Every call to <code>parse()</code> returns a discriminated union—a value where the <code>type</code> field tells you exactly what happened. Check the type first, then access the appropriate properties. This pattern ensures type safety and forces you to handle every case.</p>
+<h2>How It Works</h2>
+<pre><code>parser.parse(input)
+        ↓
+┌───────────────────────────────────────────────────────┐
+│                    ParseResult                        │
+├───────────────────────────────────────────────────────┤
+│  type: &#39;command&#39;      → CommandResult                 │
+│  type: &#39;ambiguous&#39;    → AmbiguousResult               │
+│  type: &#39;unknown_verb&#39; → UnknownVerbResult             │
+│  type: &#39;unknown_noun&#39; → UnknownNounResult             │
+│  type: &#39;parse_error&#39;  → ParseErrorResult              │
+└───────────────────────────────────────────────────────┘
+</code></pre>
+<p>TypeScript narrows the type when you check <code>result.type</code>:</p>
+<pre><code class="language-typescript">const result = parser.parse(&#39;get lamp&#39;)
+
+if (result.type === &#39;command&#39;) {
+  // TypeScript knows: result is CommandResult
+  // Safe to access: result.command.verb, result.command.subject, etc.
+}
+</code></pre>
+<h2>Basic Usage</h2>
+<pre><code class="language-typescript">import { createParser, ParseResult } from &#39;@motioneffector/parser&#39;
+
+const parser = createParser({ resolver: myResolver })
+const result = parser.parse(playerInput)
+
+switch (result.type) {
+  case &#39;command&#39;:
+    executeCommand(result.command)
+    break
+
+  case &#39;ambiguous&#39;:
+    askPlayer(`Which ${result.original}?`, result.candidates)
+    break
+
+  case &#39;unknown_verb&#39;:
+    say(`I don&#39;t know how to &quot;${result.verb}&quot;`)
+    break
+
+  case &#39;unknown_noun&#39;:
+    say(`I don&#39;t see any &quot;${result.noun}&quot; here`)
+    break
+
+  case &#39;parse_error&#39;:
+    say(result.message)
+    break
+}
+</code></pre>
+<h2>Key Points</h2>
+<ul>
+<li><strong>Always check type first</strong> - Each result type has different properties</li>
+<li><strong>Command is the success case</strong> - Contains the fully parsed and resolved command</li>
+<li><strong>Ambiguous needs player input</strong> - Multiple entities matched; player must choose</li>
+<li><strong>Unknown verb/noun are user errors</strong> - The word wasn&#39;t recognized</li>
+<li><strong>Parse error is structural</strong> - Grammar problem like missing arguments</li>
+</ul>
+<h2>Examples</h2>
+<h3>CommandResult</h3>
+<p>Successful parse with all resolved entities:</p>
+<pre><code class="language-typescript">const result = parser.parse(&#39;put the red key in the chest&#39;)
+
+if (result.type === &#39;command&#39;) {
+  const cmd = result.command
+  cmd.verb        // &#39;PUT&#39;
+  cmd.subject     // { id: &#39;key-red&#39;, noun: &#39;key&#39;, adjectives: [&#39;red&#39;] }
+  cmd.preposition // &#39;in&#39;
+  cmd.object      // { id: &#39;chest-1&#39;, noun: &#39;chest&#39;, adjectives: [] }
+  cmd.raw         // &#39;put the red key in the chest&#39;
+}
+</code></pre>
+<h3>AmbiguousResult</h3>
+<p>Multiple entities matched the noun phrase:</p>
+<pre><code class="language-typescript">const result = parser.parse(&#39;get ball&#39;)  // Red ball? Blue ball?
+
+if (result.type === &#39;ambiguous&#39;) {
+  result.candidates  // [{ id: &#39;ball-red&#39; }, { id: &#39;ball-blue&#39; }]
+  result.original    // &#39;ball&#39;
+  result.role        // &#39;subject&#39; or &#39;object&#39;
+}
+</code></pre>
+<h3>UnknownVerbResult</h3>
+<p>First word not recognized as a verb or direction:</p>
+<pre><code class="language-typescript">const result = parser.parse(&#39;dance around&#39;)
+
+if (result.type === &#39;unknown_verb&#39;) {
+  result.verb  // &#39;dance&#39;
+}
+</code></pre>
+<h3>UnknownNounResult</h3>
+<p>Resolver returned empty array for the noun:</p>
+<pre><code class="language-typescript">const result = parser.parse(&#39;get unicorn&#39;)
+
+if (result.type === &#39;unknown_noun&#39;) {
+  result.noun     // &#39;unicorn&#39;
+  result.position // Character position in input
+}
+</code></pre>
+<h3>ParseErrorResult</h3>
+<p>Structural problem with the input:</p>
+<pre><code class="language-typescript">const result = parser.parse(&#39;put key&#39;)  // Missing destination
+
+if (result.type === &#39;parse_error&#39;) {
+  result.message  // &#39;Expected preposition and target&#39;
+  result.position // Character position where error occurred
+}
+</code></pre>
+<h3>Direction Commands</h3>
+<p>Directions can be used alone or with GO:</p>
+<pre><code class="language-typescript">parser.parse(&#39;north&#39;)
+// { type: &#39;command&#39;, command: { verb: &#39;GO&#39;, direction: &#39;NORTH&#39; } }
+
+parser.parse(&#39;go north&#39;)
+// { type: &#39;command&#39;, command: { verb: &#39;GO&#39;, direction: &#39;NORTH&#39; } }
+</code></pre>
+<h3>Text Commands</h3>
+<p>SAY and similar verbs capture raw text:</p>
+<pre><code class="language-typescript">parser.parse(&#39;say Hello, world!&#39;)
+// { type: &#39;command&#39;, command: { verb: &#39;SAY&#39;, text: &#39;Hello, world!&#39; } }
+</code></pre>
+<h2>Related</h2>
+<ul>
+<li><strong><a href="guide-error-handling.html">Error Handling</a></strong> - Responding to each result type</li>
+<li><strong><a href="guide-handling-disambiguation.html">Handling Disambiguation</a></strong> - Working with ambiguous results</li>
+<li><strong><a href="api-parse-results.html">Parse Results API</a></strong> - Full interface definitions</li>
+</ul>
+
+        </article>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parsing Commands - @motioneffector/parser</title>
+  <link rel="stylesheet" href="../demo-files/demo.css">
+  <link rel="stylesheet" href="manual.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());</script>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1 class="header-title">@motioneffector/parser</h1>
+      <p class="header-description">Documentation</p>
+      <nav class="header-links">
+        <a href="../index.html" class="header-link">Demo</a>
+        <a href="https://www.npmjs.com/package/@motioneffector/parser" class="header-link">npm</a>
+        <a href="https://github.com/motioneffector/parser" class="header-link">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="manual-layout">
+      <aside class="manual-sidebar">
+        <nav class="sidebar-nav">
+<p><strong><a href="index.html">@motioneffector/parser</a></strong></p>
+<p><strong>Getting Started</strong></p>
+<ul>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="your-first-parse.html">Your First Parse</a></li>
+</ul>
+<p><strong>Core Concepts</strong></p>
+<ul>
+<li><a href="concept-vocabulary.html">Vocabulary</a></li>
+<li><a href="concept-verb-patterns.html">Verb Patterns</a></li>
+<li><a href="concept-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="concept-parse-results.html">Parse Results</a></li>
+<li><a href="concept-pronoun-tracking.html">Pronoun Tracking</a></li>
+</ul>
+<p><strong>Guides</strong></p>
+<ul>
+<li><a href="guide-parsing-commands.html">Parsing Commands</a></li>
+<li><a href="guide-handling-disambiguation.html">Handling Disambiguation</a></li>
+<li><a href="guide-custom-vocabulary.html">Custom Vocabulary</a></li>
+<li><a href="guide-error-handling.html">Error Handling</a></li>
+<li><a href="guide-using-partial-matching.html">Using Partial Matching</a></li>
+</ul>
+<p><strong>API Reference</strong></p>
+<ul>
+<li><a href="api-parser-configuration.html">Parser Configuration</a></li>
+<li><a href="api-parser-instance.html">Parser Instance</a></li>
+<li><a href="api-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="api-parse-results.html">Parse Results</a></li>
+<li><a href="api-errors.html">Errors</a></li>
+<li><a href="api-tokenization.html">Tokenization</a></li>
+</ul>
+
+        </nav>
+      </aside>
+
+      <main class="manual-content">
+        <article class="manual-article">
+<h1>Parsing Commands</h1>
+<p>This guide walks through integrating the parser into a game loop. You&#39;ll set up a resolver connected to your game state, parse player input, and execute commands based on the results.</p>
+<h2>Prerequisites</h2>
+<p>Before starting, you should:</p>
+<ul>
+<li><a href="installation.html">Have the parser installed</a></li>
+<li><a href="concept-parse-results.html">Understand parse results</a></li>
+</ul>
+<h2>Overview</h2>
+<p>We&#39;ll build a working game loop by:</p>
+<ol>
+<li>Defining your game state structure</li>
+<li>Creating a resolver that queries game state</li>
+<li>Setting up the parser with scope</li>
+<li>Handling each result type</li>
+<li>Executing commands</li>
+</ol>
+<h2>Step 1: Define Game State</h2>
+<p>Your game needs entities that the parser can resolve. At minimum, each entity needs an <code>id</code> and a way to match by name.</p>
+<pre><code class="language-typescript">interface GameItem {
+  id: string
+  name: string
+  adjectives: string[]
+}
+
+interface Room {
+  id: string
+  name: string
+  items: GameItem[]
+  exits: Record&lt;string, string&gt;  // direction → room id
+}
+
+interface GameState {
+  currentRoom: Room
+  inventory: GameItem[]
+}
+
+const gameState: GameState = {
+  currentRoom: {
+    id: &#39;room-1&#39;,
+    name: &#39;Living Room&#39;,
+    items: [
+      { id: &#39;lamp-1&#39;, name: &#39;lamp&#39;, adjectives: [&#39;brass&#39;] },
+      { id: &#39;key-1&#39;, name: &#39;key&#39;, adjectives: [&#39;rusty&#39;] },
+    ],
+    exits: { north: &#39;room-2&#39; }
+  },
+  inventory: []
+}
+</code></pre>
+<h2>Step 2: Create the Resolver</h2>
+<p>The resolver searches your game state for matching entities. It receives the noun, adjectives, and scope you provide.</p>
+<pre><code class="language-typescript">import type { ResolvedEntity, ResolverScope } from &#39;@motioneffector/parser&#39;
+
+function resolver(
+  noun: string,
+  adjectives: string[],
+  scope: ResolverScope
+): ResolvedEntity[] {
+  const room = scope.room as Room
+  const inventory = scope.inventory as GameItem[]
+
+  // Search both room and inventory
+  const visible = [...room.items, ...inventory]
+
+  // Filter by noun
+  let matches = visible.filter(item =&gt; item.name === noun)
+
+  // Narrow by adjectives if provided
+  if (adjectives.length &gt; 0) {
+    matches = matches.filter(item =&gt;
+      adjectives.every(adj =&gt; item.adjectives.includes(adj))
+    )
+  }
+
+  return matches
+}
+</code></pre>
+<h2>Step 3: Set Up the Parser</h2>
+<p>Create the parser once and reuse it. Pass scope with each parse call to give the resolver current context.</p>
+<pre><code class="language-typescript">import { createParser } from &#39;@motioneffector/parser&#39;
+
+const parser = createParser({ resolver })
+
+function parseInput(input: string) {
+  return parser.parse(input, {
+    scope: {
+      room: gameState.currentRoom,
+      inventory: gameState.inventory
+    }
+  })
+}
+</code></pre>
+<h2>Step 4: Handle Results</h2>
+<p>Process each result type appropriately:</p>
+<pre><code class="language-typescript">function handleCommand(input: string): string {
+  const result = parseInput(input)
+
+  switch (result.type) {
+    case &#39;command&#39;:
+      return executeCommand(result.command)
+
+    case &#39;ambiguous&#39;:
+      const options = result.candidates
+        .map((c, i) =&gt; `${i + 1}) ${c.name || c.id}`)
+        .join(&#39;\n&#39;)
+      return `Which ${result.original}?\n${options}`
+
+    case &#39;unknown_verb&#39;:
+      return `I don&#39;t know how to &quot;${result.verb}&quot;.`
+
+    case &#39;unknown_noun&#39;:
+      return `I don&#39;t see any &quot;${result.noun}&quot; here.`
+
+    case &#39;parse_error&#39;:
+      return result.message
+  }
+}
+</code></pre>
+<h2>Step 5: Execute Commands</h2>
+<p>Dispatch based on the verb and operate on your game state:</p>
+<pre><code class="language-typescript">import type { Command } from &#39;@motioneffector/parser&#39;
+
+function executeCommand(cmd: Command): string {
+  switch (cmd.verb) {
+    case &#39;LOOK&#39;:
+      return describeRoom(gameState.currentRoom)
+
+    case &#39;INVENTORY&#39;:
+      if (gameState.inventory.length === 0) {
+        return &quot;You&#39;re not carrying anything.&quot;
+      }
+      return &quot;You have: &quot; + gameState.inventory.map(i =&gt; i.name).join(&#39;, &#39;)
+
+    case &#39;GET&#39;: {
+      const item = findItemInRoom(cmd.subject!.id)
+      if (!item) return &quot;It&#39;s not here.&quot;
+      removeFromRoom(item)
+      gameState.inventory.push(item)
+      return `You take the ${item.name}.`
+    }
+
+    case &#39;DROP&#39;: {
+      const item = findInInventory(cmd.subject!.id)
+      if (!item) return &quot;You don&#39;t have that.&quot;
+      removeFromInventory(item)
+      gameState.currentRoom.items.push(item)
+      return `You drop the ${item.name}.`
+    }
+
+    case &#39;GO&#39;: {
+      const nextRoomId = gameState.currentRoom.exits[cmd.direction!.toLowerCase()]
+      if (!nextRoomId) return &quot;You can&#39;t go that way.&quot;
+      gameState.currentRoom = getRoomById(nextRoomId)
+      return describeRoom(gameState.currentRoom)
+    }
+
+    default:
+      return `You ${cmd.verb.toLowerCase()} the ${cmd.subject?.noun || &#39;air&#39;}.`
+  }
+}
+</code></pre>
+<h2>Complete Example</h2>
+<pre><code class="language-typescript">import { createParser } from &#39;@motioneffector/parser&#39;
+import type { Command, ResolvedEntity, ResolverScope } from &#39;@motioneffector/parser&#39;
+
+// Types
+interface GameItem {
+  id: string
+  name: string
+  adjectives: string[]
+}
+
+interface Room {
+  id: string
+  name: string
+  description: string
+  items: GameItem[]
+  exits: Record&lt;string, string&gt;
+}
+
+// State
+const rooms: Record&lt;string, Room&gt; = {
+  &#39;room-1&#39;: {
+    id: &#39;room-1&#39;,
+    name: &#39;Living Room&#39;,
+    description: &#39;A cozy room with a fireplace.&#39;,
+    items: [{ id: &#39;lamp-1&#39;, name: &#39;lamp&#39;, adjectives: [&#39;brass&#39;] }],
+    exits: { north: &#39;room-2&#39; }
+  },
+  &#39;room-2&#39;: {
+    id: &#39;room-2&#39;,
+    name: &#39;Kitchen&#39;,
+    description: &#39;A small kitchen.&#39;,
+    items: [{ id: &#39;key-1&#39;, name: &#39;key&#39;, adjectives: [&#39;rusty&#39;] }],
+    exits: { south: &#39;room-1&#39; }
+  }
+}
+
+let currentRoom = rooms[&#39;room-1&#39;]!
+const inventory: GameItem[] = []
+
+// Resolver
+function resolver(noun: string, adjectives: string[], scope: ResolverScope): ResolvedEntity[] {
+  const room = scope.room as Room
+  const inv = scope.inventory as GameItem[]
+  const visible = [...room.items, ...inv]
+  let matches = visible.filter(item =&gt; item.name === noun)
+  if (adjectives.length &gt; 0) {
+    matches = matches.filter(item =&gt; adjectives.every(adj =&gt; item.adjectives.includes(adj)))
+  }
+  return matches
+}
+
+// Parser
+const parser = createParser({ resolver })
+
+// Game loop
+function play(input: string): string {
+  const result = parser.parse(input, {
+    scope: { room: currentRoom, inventory }
+  })
+
+  if (result.type !== &#39;command&#39;) {
+    if (result.type === &#39;unknown_verb&#39;) return `I don&#39;t understand &quot;${result.verb}&quot;.`
+    if (result.type === &#39;unknown_noun&#39;) return `I don&#39;t see any &quot;${result.noun}&quot; here.`
+    if (result.type === &#39;ambiguous&#39;) return `Which ${result.original}?`
+    return result.message
+  }
+
+  const cmd = result.command
+
+  switch (cmd.verb) {
+    case &#39;LOOK&#39;:
+      return `${currentRoom.name}\n${currentRoom.description}`
+    case &#39;GO&#39;: {
+      const dir = cmd.direction!.toLowerCase()
+      const nextId = currentRoom.exits[dir]
+      if (!nextId) return &quot;You can&#39;t go that way.&quot;
+      currentRoom = rooms[nextId]!
+      return `${currentRoom.name}\n${currentRoom.description}`
+    }
+    default:
+      return `You ${cmd.verb.toLowerCase()}.`
+  }
+}
+</code></pre>
+<h2>Variations</h2>
+<h3>Async Resolver</h3>
+<p>If your game state is in a database:</p>
+<pre><code class="language-typescript">// Note: The parser expects a synchronous resolver.
+// Load data before parsing, not inside the resolver.
+
+async function handleInput(input: string) {
+  // Load current state
+  const room = await db.getRoom(currentRoomId)
+  const inventory = await db.getInventory(playerId)
+
+  const result = parser.parse(input, {
+    scope: { room, inventory }
+  })
+
+  // Handle result...
+}
+</code></pre>
+<h3>Multiple Parser Instances</h3>
+<p>For multiplayer or testing:</p>
+<pre><code class="language-typescript">// Each player can have their own parser instance
+const player1Parser = createParser({ resolver })
+const player2Parser = createParser({ resolver })
+
+// Pronoun tracking is per-instance
+player1Parser.parse(&#39;get lamp&#39;)
+player1Parser.parse(&#39;examine it&#39;)  // lamp
+player2Parser.parse(&#39;examine it&#39;)  // error - no referent
+</code></pre>
+<h2>Troubleshooting</h2>
+<h3>Pronoun &quot;it&quot; Not Working</h3>
+<p><strong>Symptom:</strong> &quot;examine it&quot; returns parse error</p>
+<p><strong>Cause:</strong> No previous entity was resolved, or room changed</p>
+<p><strong>Solution:</strong> Ensure a command with a subject succeeded first, and that scope.room hasn&#39;t changed</p>
+<h3>Items Not Found</h3>
+<p><strong>Symptom:</strong> &quot;get lamp&quot; returns unknown_noun even though lamp exists</p>
+<p><strong>Cause:</strong> Resolver isn&#39;t finding the item</p>
+<p><strong>Solution:</strong> Check that scope is being passed correctly and resolver logic matches item names</p>
+<h2>See Also</h2>
+<ul>
+<li><strong><a href="guide-error-handling.html">Error Handling</a></strong> - Better error messages</li>
+<li><strong><a href="guide-handling-disambiguation.html">Handling Disambiguation</a></strong> - When multiple items match</li>
+<li><strong><a href="concept-parse-results.html">Parse Results</a></strong> - All result types explained</li>
+</ul>
+
+        </article>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

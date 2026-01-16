@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Custom Vocabulary - @motioneffector/parser</title>
+  <link rel="stylesheet" href="../demo-files/demo.css">
+  <link rel="stylesheet" href="manual.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());</script>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1 class="header-title">@motioneffector/parser</h1>
+      <p class="header-description">Documentation</p>
+      <nav class="header-links">
+        <a href="../index.html" class="header-link">Demo</a>
+        <a href="https://www.npmjs.com/package/@motioneffector/parser" class="header-link">npm</a>
+        <a href="https://github.com/motioneffector/parser" class="header-link">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="manual-layout">
+      <aside class="manual-sidebar">
+        <nav class="sidebar-nav">
+<p><strong><a href="index.html">@motioneffector/parser</a></strong></p>
+<p><strong>Getting Started</strong></p>
+<ul>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="your-first-parse.html">Your First Parse</a></li>
+</ul>
+<p><strong>Core Concepts</strong></p>
+<ul>
+<li><a href="concept-vocabulary.html">Vocabulary</a></li>
+<li><a href="concept-verb-patterns.html">Verb Patterns</a></li>
+<li><a href="concept-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="concept-parse-results.html">Parse Results</a></li>
+<li><a href="concept-pronoun-tracking.html">Pronoun Tracking</a></li>
+</ul>
+<p><strong>Guides</strong></p>
+<ul>
+<li><a href="guide-parsing-commands.html">Parsing Commands</a></li>
+<li><a href="guide-handling-disambiguation.html">Handling Disambiguation</a></li>
+<li><a href="guide-custom-vocabulary.html">Custom Vocabulary</a></li>
+<li><a href="guide-error-handling.html">Error Handling</a></li>
+<li><a href="guide-using-partial-matching.html">Using Partial Matching</a></li>
+</ul>
+<p><strong>API Reference</strong></p>
+<ul>
+<li><a href="api-parser-configuration.html">Parser Configuration</a></li>
+<li><a href="api-parser-instance.html">Parser Instance</a></li>
+<li><a href="api-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="api-parse-results.html">Parse Results</a></li>
+<li><a href="api-errors.html">Errors</a></li>
+<li><a href="api-tokenization.html">Tokenization</a></li>
+</ul>
+
+        </nav>
+      </aside>
+
+      <main class="manual-content">
+        <article class="manual-article">
+<h1>Custom Vocabulary</h1>
+<p>Add game-specific verbs and directions, or replace the default vocabulary entirely. This guide covers runtime additions and configuration-time customization.</p>
+<h2>Prerequisites</h2>
+<p>Before starting, you should:</p>
+<ul>
+<li><a href="concept-vocabulary.html">Understand vocabulary</a></li>
+<li><a href="concept-verb-patterns.html">Understand verb patterns</a></li>
+</ul>
+<h2>Overview</h2>
+<p>We&#39;ll customize vocabulary by:</p>
+<ol>
+<li>Adding verbs at runtime with <code>addVerb()</code></li>
+<li>Adding directions at runtime with <code>addDirection()</code></li>
+<li>Extending defaults at configuration time</li>
+<li>Replacing defaults entirely</li>
+</ol>
+<h2>Step 1: Add Verbs at Runtime</h2>
+<p>Use <code>addVerb()</code> to add verbs after parser creation:</p>
+<pre><code class="language-typescript">import { createParser } from &#39;@motioneffector/parser&#39;
+
+const parser = createParser({
+  resolver: (noun) =&gt; [{ id: noun }]
+})
+
+// Add a magic verb
+parser.addVerb({
+  canonical: &#39;CAST&#39;,
+  synonyms: [&#39;cast&#39;, &#39;invoke&#39;, &#39;conjure&#39;],
+  pattern: &#39;subject&#39;
+})
+
+// Now it works
+const result = parser.parse(&#39;cast fireball&#39;)
+if (result.type === &#39;command&#39;) {
+  result.command.verb  // &#39;CAST&#39;
+}
+</code></pre>
+<h2>Step 2: Add Directions at Runtime</h2>
+<p>Use <code>addDirection()</code> for custom movement:</p>
+<pre><code class="language-typescript">// Add teleportation
+parser.addDirection({
+  canonical: &#39;PORTAL&#39;,
+  aliases: [&#39;portal&#39;, &#39;p&#39;, &#39;teleport&#39;]
+})
+
+// Works as standalone or with GO
+parser.parse(&#39;portal&#39;)      // { verb: &#39;GO&#39;, direction: &#39;PORTAL&#39; }
+parser.parse(&#39;go portal&#39;)   // { verb: &#39;GO&#39;, direction: &#39;PORTAL&#39; }
+parser.parse(&#39;p&#39;)           // { verb: &#39;GO&#39;, direction: &#39;PORTAL&#39; }
+</code></pre>
+<h2>Step 3: Extend at Configuration Time</h2>
+<p>Pass vocabulary options when creating the parser:</p>
+<pre><code class="language-typescript">const parser = createParser({
+  resolver: myResolver,
+  vocabulary: {
+    extend: true,  // Keep all defaults, add these
+    verbs: [
+      { canonical: &#39;CAST&#39;, synonyms: [&#39;cast&#39;], pattern: &#39;subject&#39; },
+      { canonical: &#39;PRAY&#39;, synonyms: [&#39;pray&#39;, &#39;worship&#39;], pattern: &#39;none&#39; },
+    ],
+    directions: [
+      { canonical: &#39;PORTAL&#39;, aliases: [&#39;portal&#39;, &#39;p&#39;] },
+    ]
+  }
+})
+
+// All default verbs still work
+parser.parse(&#39;look&#39;)        // Works
+parser.parse(&#39;get lamp&#39;)    // Works
+
+// Plus custom ones
+parser.parse(&#39;cast spell&#39;)  // Works
+parser.parse(&#39;portal&#39;)      // Works
+</code></pre>
+<h2>Step 4: Replace Defaults Entirely</h2>
+<p>For minimal or specialized parsers:</p>
+<pre><code class="language-typescript">const parser = createParser({
+  resolver: myResolver,
+  vocabulary: {
+    extend: false,  // Ignore defaults completely
+    verbs: [
+      { canonical: &#39;SAY&#39;, synonyms: [&#39;say&#39;], pattern: &#39;text&#39; },
+      { canonical: &#39;LOOK&#39;, synonyms: [&#39;look&#39;, &#39;l&#39;], pattern: &#39;none&#39; },
+    ],
+    directions: [
+      { canonical: &#39;NEXT&#39;, aliases: [&#39;next&#39;, &#39;n&#39;] },
+      { canonical: &#39;BACK&#39;, aliases: [&#39;back&#39;, &#39;b&#39;] },
+    ],
+    prepositions: [&#39;to&#39;, &#39;at&#39;],
+    articles: [&#39;the&#39;]
+  }
+})
+
+// Only recognizes what you defined
+parser.parse(&#39;look&#39;)       // Works
+parser.parse(&#39;get lamp&#39;)   // unknown_verb (GET not defined)
+parser.parse(&#39;north&#39;)      // unknown_verb (no cardinal directions)
+</code></pre>
+<h2>Complete Example</h2>
+<pre><code class="language-typescript">import { createParser } from &#39;@motioneffector/parser&#39;
+import type { VerbDefinition, DirectionDefinition } from &#39;@motioneffector/parser&#39;
+
+// Define custom vocabulary
+const magicVerbs: VerbDefinition[] = [
+  { canonical: &#39;CAST&#39;, synonyms: [&#39;cast&#39;, &#39;invoke&#39;], pattern: &#39;subject&#39; },
+  { canonical: &#39;ENCHANT&#39;, synonyms: [&#39;enchant&#39;, &#39;imbue&#39;], pattern: &#39;subject_object&#39; },
+  { canonical: &#39;MEDITATE&#39;, synonyms: [&#39;meditate&#39;, &#39;focus&#39;], pattern: &#39;none&#39; },
+  { canonical: &#39;CHANT&#39;, synonyms: [&#39;chant&#39;, &#39;incant&#39;], pattern: &#39;text&#39; },
+]
+
+const magicDirections: DirectionDefinition[] = [
+  { canonical: &#39;ASTRAL&#39;, aliases: [&#39;astral&#39;, &#39;spirit&#39;] },
+  { canonical: &#39;ETHEREAL&#39;, aliases: [&#39;ethereal&#39;, &#39;phase&#39;] },
+]
+
+// Create parser with magic vocabulary
+const parser = createParser({
+  resolver: (noun) =&gt; [{ id: noun }],
+  vocabulary: {
+    extend: true,
+    verbs: magicVerbs,
+    directions: magicDirections,
+  }
+})
+
+// Test it
+function test(input: string): void {
+  const result = parser.parse(input)
+  if (result.type === &#39;command&#39;) {
+    console.log(`${input} → ${result.command.verb}`)
+  } else {
+    console.log(`${input} → ${result.type}`)
+  }
+}
+
+test(&#39;cast fireball&#39;)           // CAST
+test(&#39;invoke lightning&#39;)        // CAST (synonym)
+test(&#39;enchant sword with fire&#39;) // ENCHANT
+test(&#39;meditate&#39;)                // MEDITATE
+test(&#39;chant om mani padme hum&#39;) // CHANT (text captured)
+test(&#39;astral&#39;)                  // GO + ASTRAL
+test(&#39;north&#39;)                   // GO + NORTH (default still works)
+test(&#39;get lamp&#39;)                // GET (default still works)
+</code></pre>
+<h2>Variations</h2>
+<h3>Pattern Selection Guide</h3>
+<p>Choose the right pattern for your verb:</p>
+<table>
+<thead>
+<tr>
+<th>If the verb...</th>
+<th>Use pattern</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Needs no arguments</td>
+<td><code>none</code></td>
+</tr>
+<tr>
+<td>Acts on one thing</td>
+<td><code>subject</code></td>
+</tr>
+<tr>
+<td>Transfers between things</td>
+<td><code>subject_object</code></td>
+</tr>
+<tr>
+<td>Is movement-related</td>
+<td><code>direction</code></td>
+</tr>
+<tr>
+<td>Takes free-form input</td>
+<td><code>text</code></td>
+</tr>
+</tbody></table>
+<h3>Flexible subject Verbs</h3>
+<p>The <code>subject</code> pattern also accepts optional preposition + object:</p>
+<pre><code class="language-typescript">parser.addVerb({
+  canonical: &#39;ATTACK&#39;,
+  synonyms: [&#39;attack&#39;, &#39;hit&#39;, &#39;strike&#39;],
+  pattern: &#39;subject&#39;  // Not subject_object
+})
+
+// Both work:
+parser.parse(&#39;attack goblin&#39;)
+// { verb: &#39;ATTACK&#39;, subject: { noun: &#39;goblin&#39; } }
+
+parser.parse(&#39;attack goblin with sword&#39;)
+// { verb: &#39;ATTACK&#39;, subject: { noun: &#39;goblin&#39; }, preposition: &#39;with&#39;, object: { noun: &#39;sword&#39; } }
+</code></pre>
+<h3>Adding Prepositions</h3>
+<p>If you need custom prepositions:</p>
+<pre><code class="language-typescript">const parser = createParser({
+  resolver: myResolver,
+  vocabulary: {
+    extend: true,
+    prepositions: [&#39;using&#39;, &#39;toward&#39;, &#39;against&#39;],  // Added to defaults
+  }
+})
+
+parser.parse(&#39;attack dragon using sword&#39;)
+// { subject: &#39;dragon&#39;, preposition: &#39;using&#39;, object: &#39;sword&#39; }
+</code></pre>
+<h2>Troubleshooting</h2>
+<h3>Custom Verb Not Recognized</h3>
+<p><strong>Symptom:</strong> Returns unknown_verb for custom verb</p>
+<p><strong>Cause:</strong> Synonym not in lowercase, or addVerb() called on wrong instance</p>
+<p><strong>Solution:</strong> Ensure all synonyms are lowercase strings, and you&#39;re parsing with the same instance</p>
+<h3>Verb Conflicts</h3>
+<p><strong>Symptom:</strong> Wrong verb recognized</p>
+<p><strong>Cause:</strong> Multiple verbs share a synonym</p>
+<p><strong>Solution:</strong> Verbs are checked in order; first match wins. Add more specific verbs first.</p>
+<h2>See Also</h2>
+<ul>
+<li><strong><a href="concept-vocabulary.html">Vocabulary</a></strong> - How vocabulary works</li>
+<li><strong><a href="concept-verb-patterns.html">Verb Patterns</a></strong> - Pattern details</li>
+<li><strong><a href="api-parser-configuration.html">Parser Configuration API</a></strong> - Full type definitions</li>
+</ul>
+
+        </article>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

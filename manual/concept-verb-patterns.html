@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verb Patterns - @motioneffector/parser</title>
+  <link rel="stylesheet" href="../demo-files/demo.css">
+  <link rel="stylesheet" href="manual.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());</script>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1 class="header-title">@motioneffector/parser</h1>
+      <p class="header-description">Documentation</p>
+      <nav class="header-links">
+        <a href="../index.html" class="header-link">Demo</a>
+        <a href="https://www.npmjs.com/package/@motioneffector/parser" class="header-link">npm</a>
+        <a href="https://github.com/motioneffector/parser" class="header-link">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="manual-layout">
+      <aside class="manual-sidebar">
+        <nav class="sidebar-nav">
+<p><strong><a href="index.html">@motioneffector/parser</a></strong></p>
+<p><strong>Getting Started</strong></p>
+<ul>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="your-first-parse.html">Your First Parse</a></li>
+</ul>
+<p><strong>Core Concepts</strong></p>
+<ul>
+<li><a href="concept-vocabulary.html">Vocabulary</a></li>
+<li><a href="concept-verb-patterns.html">Verb Patterns</a></li>
+<li><a href="concept-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="concept-parse-results.html">Parse Results</a></li>
+<li><a href="concept-pronoun-tracking.html">Pronoun Tracking</a></li>
+</ul>
+<p><strong>Guides</strong></p>
+<ul>
+<li><a href="guide-parsing-commands.html">Parsing Commands</a></li>
+<li><a href="guide-handling-disambiguation.html">Handling Disambiguation</a></li>
+<li><a href="guide-custom-vocabulary.html">Custom Vocabulary</a></li>
+<li><a href="guide-error-handling.html">Error Handling</a></li>
+<li><a href="guide-using-partial-matching.html">Using Partial Matching</a></li>
+</ul>
+<p><strong>API Reference</strong></p>
+<ul>
+<li><a href="api-parser-configuration.html">Parser Configuration</a></li>
+<li><a href="api-parser-instance.html">Parser Instance</a></li>
+<li><a href="api-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="api-parse-results.html">Parse Results</a></li>
+<li><a href="api-errors.html">Errors</a></li>
+<li><a href="api-tokenization.html">Tokenization</a></li>
+</ul>
+
+        </nav>
+      </aside>
+
+      <main class="manual-content">
+        <article class="manual-article">
+<h1>Verb Patterns</h1>
+<p>Every verb has a pattern that tells the parser what arguments to expect after it. When you type &quot;get lamp&quot;, the parser knows GET expects a subject, so it looks for an entity. When you type &quot;look&quot;, it knows LOOK expects nothing, so parsing stops there.</p>
+<h2>How It Works</h2>
+<p>There are five patterns:</p>
+<table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Expects</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>none</code></td>
+<td>Nothing</td>
+<td>look, inventory, quit</td>
+</tr>
+<tr>
+<td><code>subject</code></td>
+<td>One entity</td>
+<td>get lamp, open door</td>
+</tr>
+<tr>
+<td><code>subject_object</code></td>
+<td>Two entities + preposition</td>
+<td>put key in chest</td>
+</tr>
+<tr>
+<td><code>direction</code></td>
+<td>A direction</td>
+<td>go north</td>
+</tr>
+<tr>
+<td><code>text</code></td>
+<td>Everything as raw text</td>
+<td>say hello world</td>
+</tr>
+</tbody></table>
+<p>The parser uses the pattern to know when it&#39;s done parsing and what to look for next.</p>
+<pre><code>Input: &quot;put the red key in the old chest&quot;
+
+Pattern: subject_object
+
+Parsing:
+  verb:        PUT
+  subject:     &quot;red key&quot; → resolver → { id: &#39;key-red&#39; }
+  preposition: &quot;in&quot;
+  object:      &quot;old chest&quot; → resolver → { id: &#39;chest-old&#39; }
+</code></pre>
+<h2>Basic Usage</h2>
+<pre><code class="language-typescript">import { createParser } from &#39;@motioneffector/parser&#39;
+
+const parser = createParser({
+  resolver: (noun) =&gt; [{ id: noun }]
+})
+
+// Pattern: none
+const r1 = parser.parse(&#39;look&#39;)
+// { verb: &#39;LOOK&#39; }
+
+// Pattern: subject
+const r2 = parser.parse(&#39;get lamp&#39;)
+// { verb: &#39;GET&#39;, subject: { id: &#39;lamp&#39;, noun: &#39;lamp&#39; } }
+
+// Pattern: subject_object
+const r3 = parser.parse(&#39;put key in chest&#39;)
+// { verb: &#39;PUT&#39;, subject: {...}, preposition: &#39;in&#39;, object: {...} }
+
+// Pattern: direction
+const r4 = parser.parse(&#39;go north&#39;)
+// { verb: &#39;GO&#39;, direction: &#39;NORTH&#39; }
+
+// Pattern: text
+const r5 = parser.parse(&#39;say hello world&#39;)
+// { verb: &#39;SAY&#39;, text: &#39;hello world&#39; }
+</code></pre>
+<h2>Key Points</h2>
+<ul>
+<li><strong>Pattern determines parsing behavior</strong> - The parser stops looking for arguments once the pattern is satisfied</li>
+<li><strong>subject pattern can have optional object</strong> - &quot;unlock door&quot; and &quot;unlock door with key&quot; both work with a <code>subject</code> pattern verb</li>
+<li><strong>text captures everything</strong> - Everything after a <code>text</code> verb becomes the <code>text</code> property, no resolution</li>
+<li><strong>direction pattern requires a direction</strong> - &quot;go lamp&quot; is a parse error, not an unknown noun</li>
+</ul>
+<h2>Examples</h2>
+<h3>None Pattern</h3>
+<p>Standalone commands with no arguments:</p>
+<pre><code class="language-typescript">parser.addVerb({
+  canonical: &#39;MEDITATE&#39;,
+  synonyms: [&#39;meditate&#39;, &#39;om&#39;],
+  pattern: &#39;none&#39;
+})
+
+parser.parse(&#39;meditate&#39;)
+// { verb: &#39;MEDITATE&#39; }
+</code></pre>
+<h3>Subject Pattern</h3>
+<p>Commands that act on one thing:</p>
+<pre><code class="language-typescript">parser.addVerb({
+  canonical: &#39;CAST&#39;,
+  synonyms: [&#39;cast&#39;, &#39;invoke&#39;],
+  pattern: &#39;subject&#39;
+})
+
+parser.parse(&#39;cast fireball&#39;)
+// { verb: &#39;CAST&#39;, subject: { noun: &#39;fireball&#39;, ... } }
+</code></pre>
+<h3>Subject with Optional Object</h3>
+<p>The <code>subject</code> pattern also accepts an optional preposition + object:</p>
+<pre><code class="language-typescript">// UNLOCK has pattern &#39;subject&#39;
+parser.parse(&#39;unlock door&#39;)
+// { verb: &#39;UNLOCK&#39;, subject: { noun: &#39;door&#39; } }
+
+parser.parse(&#39;unlock door with key&#39;)
+// { verb: &#39;UNLOCK&#39;, subject: { noun: &#39;door&#39; }, preposition: &#39;with&#39;, object: { noun: &#39;key&#39; } }
+</code></pre>
+<h3>Subject-Object Pattern</h3>
+<p>Commands that require two things:</p>
+<pre><code class="language-typescript">// PUT has pattern &#39;subject_object&#39;
+parser.parse(&#39;put key in chest&#39;)
+// { verb: &#39;PUT&#39;, subject: {...}, preposition: &#39;in&#39;, object: {...} }
+
+parser.parse(&#39;put key&#39;)
+// parse_error: &quot;Expected preposition and target&quot;
+</code></pre>
+<h3>Direction Pattern</h3>
+<p>Movement commands:</p>
+<pre><code class="language-typescript">// GO has pattern &#39;direction&#39;
+parser.parse(&#39;go north&#39;)
+// { verb: &#39;GO&#39;, direction: &#39;NORTH&#39; }
+
+parser.parse(&#39;go lamp&#39;)
+// parse_error: &quot;Expected direction, got &#39;lamp&#39;&quot;
+</code></pre>
+<h3>Text Pattern</h3>
+<p>Free-form text capture:</p>
+<pre><code class="language-typescript">// SAY has pattern &#39;text&#39;
+parser.parse(&#39;say hello world&#39;)
+// { verb: &#39;SAY&#39;, text: &#39;hello world&#39; }
+
+parser.parse(&#39;say &quot;Hello!&quot; she shouted&#39;)
+// { verb: &#39;SAY&#39;, text: &#39;&quot;Hello!&quot; she shouted&#39; }
+</code></pre>
+<h2>Related</h2>
+<ul>
+<li><strong><a href="concept-vocabulary.html">Vocabulary</a></strong> - The full vocabulary system including verbs</li>
+<li><strong><a href="guide-custom-vocabulary.html">Custom Vocabulary</a></strong> - Adding verbs with custom patterns</li>
+<li><strong><a href="api-parser-configuration.html">Parser Configuration API</a></strong> - VerbPattern type definition</li>
+</ul>
+
+        </article>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

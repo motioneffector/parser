@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vocabulary - @motioneffector/parser</title>
+  <link rel="stylesheet" href="../demo-files/demo.css">
+  <link rel="stylesheet" href="manual.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());</script>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1 class="header-title">@motioneffector/parser</h1>
+      <p class="header-description">Documentation</p>
+      <nav class="header-links">
+        <a href="../index.html" class="header-link">Demo</a>
+        <a href="https://www.npmjs.com/package/@motioneffector/parser" class="header-link">npm</a>
+        <a href="https://github.com/motioneffector/parser" class="header-link">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="manual-layout">
+      <aside class="manual-sidebar">
+        <nav class="sidebar-nav">
+<p><strong><a href="index.html">@motioneffector/parser</a></strong></p>
+<p><strong>Getting Started</strong></p>
+<ul>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="your-first-parse.html">Your First Parse</a></li>
+</ul>
+<p><strong>Core Concepts</strong></p>
+<ul>
+<li><a href="concept-vocabulary.html">Vocabulary</a></li>
+<li><a href="concept-verb-patterns.html">Verb Patterns</a></li>
+<li><a href="concept-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="concept-parse-results.html">Parse Results</a></li>
+<li><a href="concept-pronoun-tracking.html">Pronoun Tracking</a></li>
+</ul>
+<p><strong>Guides</strong></p>
+<ul>
+<li><a href="guide-parsing-commands.html">Parsing Commands</a></li>
+<li><a href="guide-handling-disambiguation.html">Handling Disambiguation</a></li>
+<li><a href="guide-custom-vocabulary.html">Custom Vocabulary</a></li>
+<li><a href="guide-error-handling.html">Error Handling</a></li>
+<li><a href="guide-using-partial-matching.html">Using Partial Matching</a></li>
+</ul>
+<p><strong>API Reference</strong></p>
+<ul>
+<li><a href="api-parser-configuration.html">Parser Configuration</a></li>
+<li><a href="api-parser-instance.html">Parser Instance</a></li>
+<li><a href="api-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="api-parse-results.html">Parse Results</a></li>
+<li><a href="api-errors.html">Errors</a></li>
+<li><a href="api-tokenization.html">Tokenization</a></li>
+</ul>
+
+        </nav>
+      </aside>
+
+      <main class="manual-content">
+        <article class="manual-article">
+<h1>Vocabulary</h1>
+<p>The vocabulary is the parser&#39;s dictionary—it defines every word the parser recognizes and what that word means. Without vocabulary, the parser would see &quot;get lamp&quot; as meaningless tokens. With vocabulary, it knows &quot;get&quot; is a verb that expects a subject.</p>
+<h2>How It Works</h2>
+<p>Vocabulary has four parts:</p>
+<pre><code>┌─────────────────────────────────────────────────────────┐
+│                     Vocabulary                          │
+├─────────────────────────────────────────────────────────┤
+│  Verbs       │ Actions with patterns (get, look, put)  │
+│  Directions  │ Movement shortcuts (north, n, up)       │
+│  Prepositions│ Object connectors (in, on, with, to)    │
+│  Articles    │ Stripped words (the, a, an)             │
+└─────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Verbs</strong> are the heart of commands. Each verb has a canonical form (uppercase like <code>GET</code>), synonyms (lowercase like <code>get</code>, <code>take</code>, <code>grab</code>), and a pattern that defines what arguments it expects.</p>
+<p><strong>Directions</strong> can be used alone (&quot;north&quot;) or with GO (&quot;go north&quot;). Each has a canonical form (<code>NORTH</code>) and aliases (<code>north</code>, <code>n</code>).</p>
+<p><strong>Prepositions</strong> connect subjects to objects: &quot;put key <strong>in</strong> chest&quot;, &quot;hit barrel <strong>with</strong> hammer&quot;.</p>
+<p><strong>Articles</strong> are stripped during parsing. &quot;get <strong>the</strong> lamp&quot; becomes &quot;get lamp&quot; internally.</p>
+<h2>Basic Usage</h2>
+<pre><code class="language-typescript">import { createParser } from &#39;@motioneffector/parser&#39;
+
+// Default vocabulary is included automatically
+const parser = createParser({
+  resolver: (noun) =&gt; [{ id: noun }]
+})
+
+// These all work out of the box:
+parser.parse(&#39;get lamp&#39;)      // GET verb
+parser.parse(&#39;take lamp&#39;)     // GET verb (synonym)
+parser.parse(&#39;look&#39;)          // LOOK verb
+parser.parse(&#39;north&#39;)         // GO + NORTH direction
+parser.parse(&#39;n&#39;)             // GO + NORTH direction (alias)
+parser.parse(&#39;go north&#39;)      // GO + NORTH direction
+</code></pre>
+<h2>Key Points</h2>
+<ul>
+<li><strong>Default vocabulary is comprehensive</strong> - 27 verbs and 12 directions cover most text adventure needs</li>
+<li><strong>Synonyms map to canonical forms</strong> - &quot;get&quot;, &quot;take&quot;, and &quot;grab&quot; all become verb <code>GET</code></li>
+<li><strong>Direction aliases are shortcuts</strong> - &quot;n&quot; for &quot;north&quot;, &quot;nw&quot; for &quot;northwest&quot;</li>
+<li><strong>Articles are invisible</strong> - &quot;get the lamp&quot; and &quot;get lamp&quot; parse identically</li>
+</ul>
+<h2>Examples</h2>
+<h3>Default Verbs</h3>
+<p>The default vocabulary includes:</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Verbs</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Movement</td>
+<td>GO, ENTER, EXIT, CLIMB</td>
+</tr>
+<tr>
+<td>Interaction</td>
+<td>GET, DROP, PUT, GIVE, THROW, OPEN, CLOSE, LOCK, UNLOCK</td>
+</tr>
+<tr>
+<td>Examination</td>
+<td>LOOK, EXAMINE, SEARCH, READ</td>
+</tr>
+<tr>
+<td>Communication</td>
+<td>SAY, SHOUT, TALK, ASK, TELL</td>
+</tr>
+<tr>
+<td>Combat</td>
+<td>ATTACK, KILL, FIGHT</td>
+</tr>
+<tr>
+<td>Meta</td>
+<td>INVENTORY, SCORE, SAVE, LOAD, QUIT, HELP</td>
+</tr>
+</tbody></table>
+<h3>Default Directions</h3>
+<pre><code>NORTH (n)    SOUTH (s)    EAST (e)     WEST (w)
+NORTHEAST (ne)  NORTHWEST (nw)  SOUTHEAST (se)  SOUTHWEST (sw)
+UP (u)       DOWN (d)     IN           OUT
+</code></pre>
+<h3>Extending Vocabulary</h3>
+<p>Add game-specific verbs without losing defaults:</p>
+<pre><code class="language-typescript">const parser = createParser({
+  resolver: myResolver,
+  vocabulary: {
+    extend: true,  // Keep defaults
+    verbs: [
+      { canonical: &#39;CAST&#39;, synonyms: [&#39;cast&#39;, &#39;invoke&#39;], pattern: &#39;subject&#39; }
+    ],
+    directions: [
+      { canonical: &#39;PORTAL&#39;, aliases: [&#39;portal&#39;, &#39;p&#39;] }
+    ]
+  }
+})
+
+parser.parse(&#39;cast spell&#39;)  // Works
+parser.parse(&#39;get lamp&#39;)    // Still works (default verb)
+</code></pre>
+<h2>Related</h2>
+<ul>
+<li><strong><a href="concept-verb-patterns.html">Verb Patterns</a></strong> - How verbs specify their expected arguments</li>
+<li><strong><a href="guide-custom-vocabulary.html">Custom Vocabulary</a></strong> - Adding and replacing vocabulary</li>
+<li><strong><a href="api-parser-configuration.html">Parser Configuration API</a></strong> - Full vocabulary type definitions</li>
+</ul>
+
+        </article>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

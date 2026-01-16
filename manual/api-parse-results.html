@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parse Results API - @motioneffector/parser</title>
+  <link rel="stylesheet" href="../demo-files/demo.css">
+  <link rel="stylesheet" href="manual.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());</script>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1 class="header-title">@motioneffector/parser</h1>
+      <p class="header-description">Documentation</p>
+      <nav class="header-links">
+        <a href="../index.html" class="header-link">Demo</a>
+        <a href="https://www.npmjs.com/package/@motioneffector/parser" class="header-link">npm</a>
+        <a href="https://github.com/motioneffector/parser" class="header-link">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="manual-layout">
+      <aside class="manual-sidebar">
+        <nav class="sidebar-nav">
+<p><strong><a href="index.html">@motioneffector/parser</a></strong></p>
+<p><strong>Getting Started</strong></p>
+<ul>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="your-first-parse.html">Your First Parse</a></li>
+</ul>
+<p><strong>Core Concepts</strong></p>
+<ul>
+<li><a href="concept-vocabulary.html">Vocabulary</a></li>
+<li><a href="concept-verb-patterns.html">Verb Patterns</a></li>
+<li><a href="concept-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="concept-parse-results.html">Parse Results</a></li>
+<li><a href="concept-pronoun-tracking.html">Pronoun Tracking</a></li>
+</ul>
+<p><strong>Guides</strong></p>
+<ul>
+<li><a href="guide-parsing-commands.html">Parsing Commands</a></li>
+<li><a href="guide-handling-disambiguation.html">Handling Disambiguation</a></li>
+<li><a href="guide-custom-vocabulary.html">Custom Vocabulary</a></li>
+<li><a href="guide-error-handling.html">Error Handling</a></li>
+<li><a href="guide-using-partial-matching.html">Using Partial Matching</a></li>
+</ul>
+<p><strong>API Reference</strong></p>
+<ul>
+<li><a href="api-parser-configuration.html">Parser Configuration</a></li>
+<li><a href="api-parser-instance.html">Parser Instance</a></li>
+<li><a href="api-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="api-parse-results.html">Parse Results</a></li>
+<li><a href="api-errors.html">Errors</a></li>
+<li><a href="api-tokenization.html">Tokenization</a></li>
+</ul>
+
+        </nav>
+      </aside>
+
+      <main class="manual-content">
+        <article class="manual-article">
+<h1>Parse Results API</h1>
+<p>Types for the discriminated union returned by <code>parser.parse()</code>.</p>
+<hr>
+<h2><code>ParseResult</code></h2>
+<p>Union of all possible parse outcomes.</p>
+<pre><code class="language-typescript">type ParseResult =
+  | CommandResult
+  | AmbiguousResult
+  | UnknownVerbResult
+  | UnknownNounResult
+  | ParseErrorResult
+</code></pre>
+<p>Check <code>result.type</code> to narrow to the specific type:</p>
+<pre><code class="language-typescript">const result = parser.parse(input)
+
+switch (result.type) {
+  case &#39;command&#39;:      // CommandResult
+  case &#39;ambiguous&#39;:    // AmbiguousResult
+  case &#39;unknown_verb&#39;: // UnknownVerbResult
+  case &#39;unknown_noun&#39;: // UnknownNounResult
+  case &#39;parse_error&#39;:  // ParseErrorResult
+}
+</code></pre>
+<hr>
+<h2><code>CommandResult</code></h2>
+<p>Successful parse with a fully resolved command.</p>
+<pre><code class="language-typescript">interface CommandResult {
+  type: &#39;command&#39;
+  command: Command
+}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>type</code></td>
+<td><code>&#39;command&#39;</code></td>
+<td>Discriminator</td>
+</tr>
+<tr>
+<td><code>command</code></td>
+<td><code>Command</code></td>
+<td>The parsed command</td>
+</tr>
+</tbody></table>
+<hr>
+<h2><code>Command</code></h2>
+<p>A successfully parsed command with all resolved entities.</p>
+<pre><code class="language-typescript">interface Command {
+  verb: string
+  subject?: EntityRef
+  object?: EntityRef
+  preposition?: string
+  direction?: string
+  text?: string
+  raw: string
+}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>verb</code></td>
+<td><code>string</code></td>
+<td>Canonical verb (uppercase, e.g., <code>&quot;GET&quot;</code>)</td>
+</tr>
+<tr>
+<td><code>subject</code></td>
+<td><code>EntityRef</code></td>
+<td>Primary entity. Present for <code>subject</code> and <code>subject_object</code> patterns.</td>
+</tr>
+<tr>
+<td><code>object</code></td>
+<td><code>EntityRef</code></td>
+<td>Secondary entity. Present for <code>subject_object</code> pattern.</td>
+</tr>
+<tr>
+<td><code>preposition</code></td>
+<td><code>string</code></td>
+<td>Connecting preposition (e.g., <code>&quot;in&quot;</code>, <code>&quot;with&quot;</code>). Present when object exists.</td>
+</tr>
+<tr>
+<td><code>direction</code></td>
+<td><code>string</code></td>
+<td>Canonical direction (uppercase). Present for <code>direction</code> pattern.</td>
+</tr>
+<tr>
+<td><code>text</code></td>
+<td><code>string</code></td>
+<td>Raw text content. Present for <code>text</code> pattern.</td>
+</tr>
+<tr>
+<td><code>raw</code></td>
+<td><code>string</code></td>
+<td>Original input string</td>
+</tr>
+</tbody></table>
+<p><strong>Examples:</strong></p>
+<pre><code class="language-typescript">// &quot;look&quot;
+{ verb: &#39;LOOK&#39;, raw: &#39;look&#39; }
+
+// &quot;get lamp&quot;
+{ verb: &#39;GET&#39;, subject: { id: &#39;lamp-1&#39;, noun: &#39;lamp&#39;, adjectives: [] }, raw: &#39;get lamp&#39; }
+
+// &quot;put key in chest&quot;
+{
+  verb: &#39;PUT&#39;,
+  subject: { id: &#39;key-1&#39;, noun: &#39;key&#39;, adjectives: [] },
+  preposition: &#39;in&#39;,
+  object: { id: &#39;chest-1&#39;, noun: &#39;chest&#39;, adjectives: [] },
+  raw: &#39;put key in chest&#39;
+}
+
+// &quot;north&quot; or &quot;go north&quot;
+{ verb: &#39;GO&#39;, direction: &#39;NORTH&#39;, raw: &#39;north&#39; }
+
+// &quot;say hello world&quot;
+{ verb: &#39;SAY&#39;, text: &#39;hello world&#39;, raw: &#39;say hello world&#39; }
+</code></pre>
+<hr>
+<h2><code>EntityRef</code></h2>
+<p>Reference to a resolved entity within a command.</p>
+<pre><code class="language-typescript">interface EntityRef {
+  id: string
+  noun: string
+  adjectives: string[]
+}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>id</code></td>
+<td><code>string</code></td>
+<td>Entity ID from resolver</td>
+</tr>
+<tr>
+<td><code>noun</code></td>
+<td><code>string</code></td>
+<td>The noun that was used</td>
+</tr>
+<tr>
+<td><code>adjectives</code></td>
+<td><code>string[]</code></td>
+<td>Adjectives that were used (may be empty)</td>
+</tr>
+</tbody></table>
+<p><strong>Example:</strong></p>
+<pre><code class="language-typescript">// &quot;get the red ball&quot;
+{
+  id: &#39;ball-red&#39;,      // From resolver
+  noun: &#39;ball&#39;,        // From input
+  adjectives: [&#39;red&#39;]  // From input
+}
+</code></pre>
+<hr>
+<h2><code>AmbiguousResult</code></h2>
+<p>Multiple entities matched and disambiguation is needed.</p>
+<pre><code class="language-typescript">interface AmbiguousResult {
+  type: &#39;ambiguous&#39;
+  candidates: ResolvedEntity[]
+  original: string
+  role: &#39;subject&#39; | &#39;object&#39;
+}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>type</code></td>
+<td><code>&#39;ambiguous&#39;</code></td>
+<td>Discriminator</td>
+</tr>
+<tr>
+<td><code>candidates</code></td>
+<td><code>ResolvedEntity[]</code></td>
+<td>All matching entities from resolver</td>
+</tr>
+<tr>
+<td><code>original</code></td>
+<td><code>string</code></td>
+<td>The noun phrase that was ambiguous (e.g., <code>&quot;ball&quot;</code>)</td>
+</tr>
+<tr>
+<td><code>role</code></td>
+<td><code>&#39;subject&#39; | &#39;object&#39;</code></td>
+<td>Which part of command was ambiguous</td>
+</tr>
+</tbody></table>
+<p><strong>Example:</strong></p>
+<pre><code class="language-typescript">// &quot;get ball&quot; when red and blue balls exist
+{
+  type: &#39;ambiguous&#39;,
+  candidates: [
+    { id: &#39;ball-red&#39;, name: &#39;red ball&#39; },
+    { id: &#39;ball-blue&#39;, name: &#39;blue ball&#39; }
+  ],
+  original: &#39;ball&#39;,
+  role: &#39;subject&#39;
+}
+</code></pre>
+<hr>
+<h2><code>UnknownVerbResult</code></h2>
+<p>First word not recognized as a verb or direction.</p>
+<pre><code class="language-typescript">interface UnknownVerbResult {
+  type: &#39;unknown_verb&#39;
+  verb: string
+}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>type</code></td>
+<td><code>&#39;unknown_verb&#39;</code></td>
+<td>Discriminator</td>
+</tr>
+<tr>
+<td><code>verb</code></td>
+<td><code>string</code></td>
+<td>The unrecognized word</td>
+</tr>
+</tbody></table>
+<p><strong>Example:</strong></p>
+<pre><code class="language-typescript">// &quot;dance around&quot;
+{
+  type: &#39;unknown_verb&#39;,
+  verb: &#39;dance&#39;
+}
+</code></pre>
+<hr>
+<h2><code>UnknownNounResult</code></h2>
+<p>Resolver returned empty array for the noun.</p>
+<pre><code class="language-typescript">interface UnknownNounResult {
+  type: &#39;unknown_noun&#39;
+  noun: string
+  position: number
+}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>type</code></td>
+<td><code>&#39;unknown_noun&#39;</code></td>
+<td>Discriminator</td>
+</tr>
+<tr>
+<td><code>noun</code></td>
+<td><code>string</code></td>
+<td>The unrecognized noun</td>
+</tr>
+<tr>
+<td><code>position</code></td>
+<td><code>number</code></td>
+<td>Character position in input where noun appeared</td>
+</tr>
+</tbody></table>
+<p><strong>Example:</strong></p>
+<pre><code class="language-typescript">// &quot;get unicorn&quot;
+{
+  type: &#39;unknown_noun&#39;,
+  noun: &#39;unicorn&#39;,
+  position: 4
+}
+</code></pre>
+<hr>
+<h2><code>ParseErrorResult</code></h2>
+<p>Structural problem with the input.</p>
+<pre><code class="language-typescript">interface ParseErrorResult {
+  type: &#39;parse_error&#39;
+  message: string
+  position: number
+}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>type</code></td>
+<td><code>&#39;parse_error&#39;</code></td>
+<td>Discriminator</td>
+</tr>
+<tr>
+<td><code>message</code></td>
+<td><code>string</code></td>
+<td>Human-readable error description</td>
+</tr>
+<tr>
+<td><code>position</code></td>
+<td><code>number</code></td>
+<td>Character position where error occurred</td>
+</tr>
+</tbody></table>
+<p><strong>Common Messages:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Message</th>
+<th>Cause</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>&quot;Empty input&quot;</code></td>
+<td>Input was empty or only whitespace</td>
+</tr>
+<tr>
+<td><code>&quot;Expected object after GET&quot;</code></td>
+<td>Verb requires subject but none provided</td>
+</tr>
+<tr>
+<td><code>&quot;Expected direction after GO&quot;</code></td>
+<td>GO without a direction</td>
+</tr>
+<tr>
+<td><code>&quot;Expected preposition and target&quot;</code></td>
+<td>PUT without destination</td>
+</tr>
+<tr>
+<td><code>&quot;Expected direction, got &#39;X&#39;&quot;</code></td>
+<td>GO followed by non-direction</td>
+</tr>
+<tr>
+<td><code>&quot;Cannot use &#39;it&#39; without a previous referent&quot;</code></td>
+<td>Pronoun with no antecedent</td>
+</tr>
+</tbody></table>
+<p><strong>Example:</strong></p>
+<pre><code class="language-typescript">// &quot;put key&quot; (missing destination)
+{
+  type: &#39;parse_error&#39;,
+  message: &#39;Expected preposition and target&#39;,
+  position: 7
+}
+</code></pre>
+
+        </article>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

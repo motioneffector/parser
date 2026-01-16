@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>@motioneffector/parser - @motioneffector/parser</title>
+  <link rel="stylesheet" href="../demo-files/demo.css">
+  <link rel="stylesheet" href="manual.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());</script>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1 class="header-title">@motioneffector/parser</h1>
+      <p class="header-description">Documentation</p>
+      <nav class="header-links">
+        <a href="../index.html" class="header-link">Demo</a>
+        <a href="https://www.npmjs.com/package/@motioneffector/parser" class="header-link">npm</a>
+        <a href="https://github.com/motioneffector/parser" class="header-link">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="manual-layout">
+      <aside class="manual-sidebar">
+        <nav class="sidebar-nav">
+<p><strong><a href="index.html">@motioneffector/parser</a></strong></p>
+<p><strong>Getting Started</strong></p>
+<ul>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="your-first-parse.html">Your First Parse</a></li>
+</ul>
+<p><strong>Core Concepts</strong></p>
+<ul>
+<li><a href="concept-vocabulary.html">Vocabulary</a></li>
+<li><a href="concept-verb-patterns.html">Verb Patterns</a></li>
+<li><a href="concept-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="concept-parse-results.html">Parse Results</a></li>
+<li><a href="concept-pronoun-tracking.html">Pronoun Tracking</a></li>
+</ul>
+<p><strong>Guides</strong></p>
+<ul>
+<li><a href="guide-parsing-commands.html">Parsing Commands</a></li>
+<li><a href="guide-handling-disambiguation.html">Handling Disambiguation</a></li>
+<li><a href="guide-custom-vocabulary.html">Custom Vocabulary</a></li>
+<li><a href="guide-error-handling.html">Error Handling</a></li>
+<li><a href="guide-using-partial-matching.html">Using Partial Matching</a></li>
+</ul>
+<p><strong>API Reference</strong></p>
+<ul>
+<li><a href="api-parser-configuration.html">Parser Configuration</a></li>
+<li><a href="api-parser-instance.html">Parser Instance</a></li>
+<li><a href="api-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="api-parse-results.html">Parse Results</a></li>
+<li><a href="api-errors.html">Errors</a></li>
+<li><a href="api-tokenization.html">Tokenization</a></li>
+</ul>
+
+        </nav>
+      </aside>
+
+      <main class="manual-content">
+        <article class="manual-article">
+<h1>@motioneffector/parser</h1>
+<p>A natural language command parser for text adventures and interactive fiction. You give it player input like &quot;get the red ball from the chest&quot; and it gives you a structured command object: verb <code>GET</code>, subject <code>{id: &quot;ball-red&quot;}</code>, object <code>{id: &quot;chest-1&quot;}</code>, preposition <code>from</code>. Your job is to provide a resolver function that connects noun phrases to your game&#39;s entities—the parser handles everything else.</p>
+<h2>I want to...</h2>
+<table>
+<thead>
+<tr>
+<th>Goal</th>
+<th>Where to go</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Get up and running quickly</td>
+<td><a href="your-first-parse.html">Your First Parse</a></td>
+</tr>
+<tr>
+<td>Understand how vocabulary works</td>
+<td><a href="concept-vocabulary.html">Vocabulary</a></td>
+</tr>
+<tr>
+<td>Parse commands in my game</td>
+<td><a href="guide-parsing-commands.html">Parsing Commands</a></td>
+</tr>
+<tr>
+<td>Handle ambiguous entities</td>
+<td><a href="guide-handling-disambiguation.html">Handling Disambiguation</a></td>
+</tr>
+<tr>
+<td>Add custom verbs</td>
+<td><a href="guide-custom-vocabulary.html">Custom Vocabulary</a></td>
+</tr>
+<tr>
+<td>Handle parse errors gracefully</td>
+<td><a href="guide-error-handling.html">Error Handling</a></td>
+</tr>
+<tr>
+<td>Look up a specific method</td>
+<td><a href="api-parser-configuration.html">API Reference</a></td>
+</tr>
+</tbody></table>
+<h2>Key Concepts</h2>
+<h3>Vocabulary</h3>
+<p>The vocabulary defines what words the parser recognizes: verbs with their synonyms and argument patterns, directions with shortcuts, prepositions that connect objects, and articles to strip. Ships with 27 verbs and 12 directions out of the box.</p>
+<h3>Verb Patterns</h3>
+<p>Every verb has a pattern that tells the parser what arguments to expect. <code>look</code> expects nothing, <code>get</code> expects one thing, <code>put</code> expects a thing and a destination, <code>go</code> expects a direction, and <code>say</code> captures everything as text.</p>
+<h3>Entity Resolution</h3>
+<p>You provide a resolver function that the parser calls to look up entities. Given a noun and adjectives, you return matching entities from your game state. Return one for success, multiple for disambiguation, or empty for &quot;I don&#39;t see that here.&quot;</p>
+<h3>Parse Results</h3>
+<p>The parser returns a discriminated union—check the <code>type</code> field to know what happened. You&#39;ll get <code>command</code> for success, <code>ambiguous</code> when multiple entities match, <code>unknown_verb</code> or <code>unknown_noun</code> for unrecognized words, or <code>parse_error</code> for structural problems.</p>
+<h2>Quick Example</h2>
+<pre><code class="language-typescript">import { createParser } from &#39;@motioneffector/parser&#39;
+
+// Your resolver connects the parser to your game state
+const parser = createParser({
+  resolver: (noun, adjectives, scope) =&gt; {
+    // Look up entities by name in current room
+    const room = scope.room as { items: Array&lt;{ id: string; name: string }&gt; }
+    return room.items.filter(item =&gt; item.name === noun)
+  }
+})
+
+// Parse player input
+const result = parser.parse(&#39;get lamp&#39;, {
+  scope: { room: { items: [{ id: &#39;lamp-1&#39;, name: &#39;lamp&#39; }] } }
+})
+
+if (result.type === &#39;command&#39;) {
+  console.log(result.command.verb)       // &quot;GET&quot;
+  console.log(result.command.subject?.id) // &quot;lamp-1&quot;
+}
+</code></pre>
+<hr>
+<p><strong><a href="api-parser-configuration.html">Full API Reference →</a></strong></p>
+
+        </article>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

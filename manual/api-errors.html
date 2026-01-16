@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Errors API - @motioneffector/parser</title>
+  <link rel="stylesheet" href="../demo-files/demo.css">
+  <link rel="stylesheet" href="manual.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());</script>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1 class="header-title">@motioneffector/parser</h1>
+      <p class="header-description">Documentation</p>
+      <nav class="header-links">
+        <a href="../index.html" class="header-link">Demo</a>
+        <a href="https://www.npmjs.com/package/@motioneffector/parser" class="header-link">npm</a>
+        <a href="https://github.com/motioneffector/parser" class="header-link">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="manual-layout">
+      <aside class="manual-sidebar">
+        <nav class="sidebar-nav">
+<p><strong><a href="index.html">@motioneffector/parser</a></strong></p>
+<p><strong>Getting Started</strong></p>
+<ul>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="your-first-parse.html">Your First Parse</a></li>
+</ul>
+<p><strong>Core Concepts</strong></p>
+<ul>
+<li><a href="concept-vocabulary.html">Vocabulary</a></li>
+<li><a href="concept-verb-patterns.html">Verb Patterns</a></li>
+<li><a href="concept-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="concept-parse-results.html">Parse Results</a></li>
+<li><a href="concept-pronoun-tracking.html">Pronoun Tracking</a></li>
+</ul>
+<p><strong>Guides</strong></p>
+<ul>
+<li><a href="guide-parsing-commands.html">Parsing Commands</a></li>
+<li><a href="guide-handling-disambiguation.html">Handling Disambiguation</a></li>
+<li><a href="guide-custom-vocabulary.html">Custom Vocabulary</a></li>
+<li><a href="guide-error-handling.html">Error Handling</a></li>
+<li><a href="guide-using-partial-matching.html">Using Partial Matching</a></li>
+</ul>
+<p><strong>API Reference</strong></p>
+<ul>
+<li><a href="api-parser-configuration.html">Parser Configuration</a></li>
+<li><a href="api-parser-instance.html">Parser Instance</a></li>
+<li><a href="api-entity-resolution.html">Entity Resolution</a></li>
+<li><a href="api-parse-results.html">Parse Results</a></li>
+<li><a href="api-errors.html">Errors</a></li>
+<li><a href="api-tokenization.html">Tokenization</a></li>
+</ul>
+
+        </nav>
+      </aside>
+
+      <main class="manual-content">
+        <article class="manual-article">
+<h1>Errors API</h1>
+<p>Error classes that may be thrown by the parser.</p>
+<hr>
+<h2><code>ParserError</code></h2>
+<p>Base error class for all parser errors.</p>
+<pre><code class="language-typescript">class ParserError extends Error {
+  name: &#39;ParserError&#39;
+}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>name</code></td>
+<td><code>string</code></td>
+<td>Always <code>&#39;ParserError&#39;</code></td>
+</tr>
+<tr>
+<td><code>message</code></td>
+<td><code>string</code></td>
+<td>Error description</td>
+</tr>
+</tbody></table>
+<p><strong>Usage:</strong></p>
+<pre><code class="language-typescript">import { ParserError } from &#39;@motioneffector/parser&#39;
+
+try {
+  parser.parse(input)
+} catch (error) {
+  if (error instanceof ParserError) {
+    // Handle parser-specific error
+  }
+}
+</code></pre>
+<hr>
+<h2><code>ValidationError</code></h2>
+<p>Thrown when input validation fails.</p>
+<pre><code class="language-typescript">class ValidationError extends ParserError {
+  name: &#39;ValidationError&#39;
+  field?: string
+}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>name</code></td>
+<td><code>string</code></td>
+<td>Always <code>&#39;ValidationError&#39;</code></td>
+</tr>
+<tr>
+<td><code>message</code></td>
+<td><code>string</code></td>
+<td>Error description</td>
+</tr>
+<tr>
+<td><code>field</code></td>
+<td><code>string | undefined</code></td>
+<td>Name of the invalid field (if applicable)</td>
+</tr>
+</tbody></table>
+<p><strong>When Thrown:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Condition</th>
+<th>Message</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Resolver not a function</td>
+<td><code>&quot;Resolver must be a function&quot;</code></td>
+</tr>
+<tr>
+<td>Input exceeds max length</td>
+<td><code>&quot;Input exceeds maximum length of 1000000 characters&quot;</code></td>
+</tr>
+</tbody></table>
+<p><strong>Example:</strong></p>
+<pre><code class="language-typescript">import { createParser, ValidationError } from &#39;@motioneffector/parser&#39;
+
+try {
+  // Missing resolver
+  createParser({} as any)
+} catch (error) {
+  if (error instanceof ValidationError) {
+    console.log(error.message)  // &quot;Resolver must be a function&quot;
+    console.log(error.field)    // &quot;resolver&quot;
+  }
+}
+
+try {
+  // Input too long
+  parser.parse(&#39;x&#39;.repeat(2_000_000))
+} catch (error) {
+  if (error instanceof ValidationError) {
+    console.log(error.message)  // &quot;Input exceeds maximum length...&quot;
+    console.log(error.field)    // &quot;input&quot;
+  }
+}
+</code></pre>
+<hr>
+<h2><code>ParseError</code></h2>
+<p>Thrown when parsing fails critically.</p>
+<pre><code class="language-typescript">class ParseError extends ParserError {
+  name: &#39;ParseError&#39;
+  position?: number
+  input?: string
+}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>name</code></td>
+<td><code>string</code></td>
+<td>Always <code>&#39;ParseError&#39;</code></td>
+</tr>
+<tr>
+<td><code>message</code></td>
+<td><code>string</code></td>
+<td>Error description</td>
+</tr>
+<tr>
+<td><code>position</code></td>
+<td><code>number | undefined</code></td>
+<td>Character position of error</td>
+</tr>
+<tr>
+<td><code>input</code></td>
+<td><code>string | undefined</code></td>
+<td>The input string that failed</td>
+</tr>
+</tbody></table>
+<p><strong>Notes:</strong></p>
+<p>This error class exists for internal use and future extension. Currently, parsing failures are returned as <code>ParseErrorResult</code> values rather than thrown exceptions.</p>
+<pre><code class="language-typescript">// Parsing issues return results, not exceptions
+const result = parser.parse(&#39;get&#39;)
+if (result.type === &#39;parse_error&#39;) {
+  console.log(result.message)  // &quot;Expected object after GET&quot;
+}
+</code></pre>
+<hr>
+<h2>Error Handling Pattern</h2>
+<pre><code class="language-typescript">import { createParser, ValidationError, ParserError } from &#39;@motioneffector/parser&#39;
+
+function safeCreate(resolver: Resolver): Parser | null {
+  try {
+    return createParser({ resolver })
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      console.error(`Configuration error: ${error.message}`)
+      return null
+    }
+    throw error  // Re-throw unexpected errors
+  }
+}
+
+function safeParse(parser: Parser, input: string): ParseResult | null {
+  try {
+    return parser.parse(input)
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      // Input too long
+      console.error(&#39;Input rejected:&#39;, error.message)
+      return null
+    }
+    if (error instanceof ParserError) {
+      console.error(&#39;Parser error:&#39;, error.message)
+      return null
+    }
+    throw error
+  }
+}
+</code></pre>
+<hr>
+<h2>Error vs Result</h2>
+<p>The parser distinguishes between:</p>
+<p><strong>Errors (thrown):</strong> Configuration problems, security limits</p>
+<ul>
+<li>Invalid resolver → <code>ValidationError</code></li>
+<li>Input too long → <code>ValidationError</code></li>
+</ul>
+<p><strong>Results (returned):</strong> Normal parsing outcomes</p>
+<ul>
+<li>Empty input → <code>ParseErrorResult</code></li>
+<li>Unknown word → <code>UnknownVerbResult</code> / <code>UnknownNounResult</code></li>
+<li>Missing argument → <code>ParseErrorResult</code></li>
+<li>Multiple matches → <code>AmbiguousResult</code></li>
+<li>Success → <code>CommandResult</code></li>
+</ul>
+
+        </article>
+      </main>
+    </div>
+  </div>
+</body>
+</html>
