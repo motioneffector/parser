@@ -1,29 +1,29 @@
 class R extends Error {
-  constructor(i) {
-    super(i), this.name = "ParserError", Object.setPrototypeOf(this, new.target.prototype);
+  constructor(o) {
+    super(o), this.name = "ParserError", Object.setPrototypeOf(this, new.target.prototype);
   }
 }
 class L extends R {
-  constructor(i, t) {
-    super(i), this.field = t, this.name = "ValidationError";
+  constructor(o, t) {
+    super(o), this.field = t, this.name = "ValidationError";
   }
 }
-class V extends R {
-  constructor(i, t, g) {
-    super(i), this.position = t, this.input = g, this.name = "ParseError";
+class D extends R {
+  constructor(o, t, b) {
+    super(o), this.position = t, this.input = b, this.name = "ParseError";
   }
 }
-function F(e) {
-  const i = [];
+function H(e) {
+  const o = [];
   let t = 0;
   for (; t < e.length; ) {
-    const g = e[t];
-    if (g && /\s/.test(g)) {
+    const b = e[t];
+    if (b && /\s/.test(b)) {
       t++;
       continue;
     }
-    if (g === '"' || g === "'") {
-      const m = g, b = t;
+    if (b === '"' || b === "'") {
+      const m = b, g = t;
       t++;
       let d = "", T = !1;
       for (; t < e.length; ) {
@@ -42,26 +42,26 @@ function F(e) {
         }
         d += p, t++;
       }
-      T || (d = e.slice(b + 1), t = e.length), i.push({
+      T || (d = e.slice(g + 1), t = e.length), o.push({
         type: "QUOTED_STRING",
         value: d,
-        original: e.slice(b, t),
-        start: b,
+        original: e.slice(g, t),
+        start: g,
         end: t
       });
       continue;
     }
-    if (g && /[a-zA-Z0-9_\u0080-\uFFFF]/.test(g)) {
+    if (b && /[a-zA-Z0-9_\u0080-\uFFFF]/.test(b)) {
       const m = t;
-      let b = "";
+      let g = "";
       for (; t < e.length; ) {
         const p = e[t];
         if (p && /[a-zA-Z0-9_\u0080-\uFFFF]/.test(p))
-          b += p, t++;
+          g += p, t++;
         else
           break;
       }
-      let d = b;
+      let d = g;
       for (; d.length > 0; ) {
         const p = d[d.length - 1];
         if (p && /[.,!?;:]/.test(p))
@@ -76,24 +76,24 @@ function F(e) {
         else
           break;
       }
-      const T = e.slice(m, m + b.length);
-      i.push({
+      const T = e.slice(m, m + g.length);
+      o.push({
         type: "WORD",
         value: d.toLowerCase(),
         original: T,
         start: m,
-        end: m + b.length
+        end: m + g.length
       });
       continue;
     }
     t++;
   }
-  return i;
+  return o;
 }
 function P(e) {
   Object.freeze(e);
-  for (const i of Object.values(e))
-    i !== null && typeof i == "object" && !Object.isFrozen(i) && P(i);
+  for (const o of Object.values(e))
+    o !== null && typeof o == "object" && !Object.isFrozen(o) && P(o);
   return e;
 }
 const k = P({
@@ -154,51 +154,51 @@ const k = P({
   prepositions: ["with", "to", "at", "in", "on", "from", "into", "onto", "about"],
   articles: ["the", "a", "an"]
 }), O = 1e6;
-function D(e) {
+function W(e) {
   if (typeof e.resolver != "function")
     throw new L("Resolver must be a function", "resolver");
-  const i = H(e.vocabulary), t = e.partialMatch ?? !0, g = e.minPartialLength ?? 3;
-  let m = null, b = null;
-  function d(o) {
-    for (const a of i.verbs)
-      if (a.synonyms.includes(o))
-        return a;
-    if (t && o.length >= g) {
-      for (const a of i.verbs)
-        for (const x of a.synonyms)
-          if (x.startsWith(o))
-            return a;
+  const o = V(e.vocabulary), t = e.partialMatch ?? !0, b = e.minPartialLength ?? 3;
+  let m = null, g = null;
+  function d(s) {
+    for (const i of o.verbs)
+      if (i.synonyms.includes(s))
+        return i;
+    if (t && s.length >= b) {
+      for (const i of o.verbs)
+        for (const x of i.synonyms)
+          if (x.startsWith(s))
+            return i;
     }
     return null;
   }
-  function T(o) {
-    for (const a of i.directions)
-      if (a.aliases.includes(o))
-        return a.canonical;
+  function T(s) {
+    for (const i of o.directions)
+      if (i.aliases.includes(s))
+        return i.canonical;
     return null;
   }
-  function p(o) {
-    return i.articles.includes(o);
+  function p(s) {
+    return o.articles.includes(s);
   }
-  function _(o) {
-    return i.prepositions.includes(o);
+  function _(s) {
+    return o.prepositions.includes(s);
   }
-  function S(o, a, x) {
-    let l = a;
+  function S(s, i, x) {
+    let l = i;
     const n = [];
     let E = null;
-    for (; l < o.length; ) {
-      const r = o[l];
+    for (; l < s.length; ) {
+      const r = s[l];
       if (r && p(r.value))
         l++;
       else
         break;
     }
-    const w = o[l];
+    const w = s[l];
     if ((w == null ? void 0 : w.value) === "it")
-      return m ? { entity: m, consumed: l - a + 1 } : {
+      return m ? { entity: m, consumed: l - i + 1 } : {
         entity: null,
-        consumed: l - a + 1,
+        consumed: l - i + 1,
         error: {
           type: "parse_error",
           message: 'Cannot use "it" without a previous referent',
@@ -206,8 +206,8 @@ function D(e) {
         }
       };
     const u = [];
-    for (; l < o.length; ) {
-      const r = o[l];
+    for (; l < s.length; ) {
+      const r = s[l];
       if (!r || _(r.value) || T(r.value)) break;
       p(r.value) || u.push(r.value), l++;
     }
@@ -221,10 +221,10 @@ function D(e) {
     try {
       c = e.resolver(E, n, x ?? {});
     } catch {
-      const r = o[a];
+      const r = s[i];
       return {
         entity: null,
-        consumed: l - a,
+        consumed: l - i,
         error: {
           type: "unknown_noun",
           noun: E,
@@ -233,10 +233,10 @@ function D(e) {
       };
     }
     if (!Array.isArray(c)) {
-      const r = o[a];
+      const r = s[i];
       return {
         entity: null,
-        consumed: l - a,
+        consumed: l - i,
         error: {
           type: "unknown_noun",
           noun: E,
@@ -245,10 +245,10 @@ function D(e) {
       };
     }
     if (c.length === 0) {
-      const r = o[a];
+      const r = s[i];
       return {
         entity: null,
-        consumed: l - a,
+        consumed: l - i,
         error: {
           type: "unknown_noun",
           noun: E,
@@ -259,7 +259,7 @@ function D(e) {
     if (c.length > 1)
       return {
         entity: null,
-        consumed: l - a,
+        consumed: l - i,
         error: {
           type: "ambiguous",
           candidates: c,
@@ -272,17 +272,17 @@ function D(e) {
       id: j.id,
       noun: E,
       adjectives: n
-    }, consumed: l - a } : { entity: null, consumed: 0 };
+    }, consumed: l - i } : { entity: null, consumed: 0 };
   }
-  function $(o, a) {
-    const x = o, l = a == null ? void 0 : a.scope;
-    if (o.length > O)
+  function $(s, i) {
+    const x = s, l = i == null ? void 0 : i.scope;
+    if (s.length > O)
       throw new L(
         `Input exceeds maximum length of ${O} characters`,
         "input"
       );
-    l && l.room !== b && (m = null, b = l.room);
-    const n = F(o);
+    l && l.room !== g && (m = null, g = l.room);
+    const n = H(s);
     if (n.length === 0)
       return {
         type: "parse_error",
@@ -359,34 +359,34 @@ function D(e) {
     }
     if (u.pattern === "subject") {
       if (n.length < 2) {
-        const s = n[n.length - 1];
+        const a = n[n.length - 1];
         return {
           type: "parse_error",
           message: `Expected object after "${u.canonical}"`,
-          position: s ? s.end : 0
+          position: a ? a.end : 0
         };
       }
       const { entity: c, consumed: j, error: h } = S(n, 1, l);
       if (h)
         return h;
       if (!c) {
-        const s = n[1];
+        const a = n[1];
         return {
           type: "parse_error",
           message: `Expected object after "${u.canonical}"`,
-          position: s ? s.start : 0
+          position: a ? a.start : 0
         };
       }
       f.subject = c;
       const r = 1 + j;
       if (r < n.length) {
-        const s = n[r];
-        if (s && _(s.value)) {
-          if (f.preposition = s.value, r + 1 >= n.length)
+        const a = n[r];
+        if (a && _(a.value)) {
+          if (f.preposition = a.value, r + 1 >= n.length)
             return {
               type: "parse_error",
-              message: `Expected target after "${s.value}"`,
-              position: s.end
+              message: `Expected target after "${a.value}"`,
+              position: a.end
             };
           const {
             entity: A,
@@ -398,7 +398,7 @@ function D(e) {
             const y = n[r + 1];
             return {
               type: "parse_error",
-              message: `Expected target after "${s.value}"`,
+              message: `Expected target after "${a.value}"`,
               position: y ? y.start : 0
             };
           }
@@ -441,20 +441,20 @@ function D(e) {
           position: y ? y.end : 0
         };
       }
-      const s = n[r];
-      if (!s || !_(s.value)) {
+      const a = n[r];
+      if (!a || !_(a.value)) {
         const y = n[n.length - 1];
         return {
           type: "parse_error",
-          message: `Expected preposition, got "${(s == null ? void 0 : s.value) ?? "nothing"}"`,
-          position: (s == null ? void 0 : s.start) ?? (y ? y.end : 0)
+          message: `Expected preposition, got "${(a == null ? void 0 : a.value) ?? "nothing"}"`,
+          position: (a == null ? void 0 : a.start) ?? (y ? y.end : 0)
         };
       }
-      if (f.preposition = s.value, r + 1 >= n.length)
+      if (f.preposition = a.value, r + 1 >= n.length)
         return {
           type: "parse_error",
-          message: `Expected target after "${s.value}"`,
-          position: s.end
+          message: `Expected target after "${a.value}"`,
+          position: a.end
         };
       const {
         entity: A,
@@ -466,30 +466,39 @@ function D(e) {
         const y = n[r + 1];
         return {
           type: "parse_error",
-          message: `Expected target after "${s.value}"`,
+          message: `Expected target after "${a.value}"`,
           position: y ? y.start : 0
         };
       }
       return f.object = A, m = c, { type: "command", command: f };
     }
   }
-  function C(o) {
-    i.verbs.push(o);
+  function C(s) {
+    o.verbs.push(s);
   }
-  function N(o) {
-    i.directions.push(o);
+  function N(s) {
+    o.directions.push(s);
   }
   function U() {
     m = null;
+  }
+  function F() {
+    return {
+      verbs: [...o.verbs],
+      directions: [...o.directions],
+      prepositions: [...o.prepositions],
+      articles: [...o.articles]
+    };
   }
   return {
     parse: $,
     addVerb: C,
     addDirection: N,
-    clearPronoun: U
+    clearPronoun: U,
+    getVocabulary: F
   };
 }
-function H(e) {
+function V(e) {
   return e ? e.extend ?? !0 ? {
     verbs: [...k.verbs, ...e.verbs ?? []],
     directions: [...k.directions, ...e.directions ?? []],
@@ -508,8 +517,8 @@ function H(e) {
   };
 }
 export {
-  V as ParseError,
+  D as ParseError,
   R as ParserError,
   L as ValidationError,
-  D as createParser
+  W as createParser
 };
