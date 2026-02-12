@@ -1,6 +1,6 @@
 {
   "name": "@motioneffector/parser",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Text adventure command parser for natural language game input",
   "author": "motioneffector",
   "license": "MIT",
