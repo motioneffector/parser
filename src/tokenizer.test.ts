@@ -12,6 +12,9 @@ describe('Tokenization', () => {
     it('normalizes multiple spaces to single space', () => {
       const tokens = tokenize('get    the     lamp')
       expect(tokens).toHaveLength(3)
+      expect(tokens[0]!.value).toBe('get')
+      expect(tokens[1]!.value).toBe('the')
+      expect(tokens[2]!.value).toBe('lamp')
     })
 
     it('trims leading and trailing whitespace', () => {
@@ -31,14 +34,24 @@ describe('Tokenization', () => {
       expect(tokens[1]!.original).toBe('Lamp')
     })
 
-    it('returns empty array for empty input', () => {
+    it('returns empty when input is empty string', () => {
+      // Verify tokenizer produces tokens for non-empty input
+      const nonEmptyTokens = tokenize('hello')
+      expect(nonEmptyTokens).toHaveLength(1)
+      expect(nonEmptyTokens[0]!.value).toBe('hello')
+      // Verify empty input produces no tokens - contrast with the above
       const tokens = tokenize('')
-      expect(tokens).toEqual([])
+      expect(tokens).toStrictEqual([])
     })
 
-    it('returns empty array for whitespace-only input', () => {
+    it('returns empty when input is whitespace only', () => {
+      // Verify tokenizer produces tokens for non-whitespace input
+      const nonEmptyTokens = tokenize('world')
+      expect(nonEmptyTokens).toHaveLength(1)
+      expect(nonEmptyTokens[0]!.value).toBe('world')
+      // Verify whitespace-only input produces no tokens - contrast with the above
       const tokens = tokenize('   ')
-      expect(tokens).toEqual([])
+      expect(tokens).toStrictEqual([])
     })
   })
 
