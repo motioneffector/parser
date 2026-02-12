@@ -293,17 +293,12 @@ describe('Fuzz: parser.parse() - Input Mutation', () => {
 
     const result = fuzzLoop((random) => {
       const input = generateCommand(random)
-      // Should not throw
       const result = parser.parse(input)
-      // Should always return a result with type property
-      if (!result || typeof result.type !== 'string') {
-        throw new Error(`Invalid result: ${JSON.stringify(result)}`)
-      }
+      expect(result).toBeDefined()
+      expect(['command', 'ambiguous', 'unknown_verb', 'unknown_noun', 'parse_error']).toContain(result.type)
     })
 
-    if (THOROUGH_MODE) {
-      console.log(`Completed ${result.iterations} iterations in ${result.durationMs}ms`)
-    }
+    expect(result.iterations).toBeGreaterThan(0)
   })
 
   it('handles empty and whitespace-only strings', () => {
@@ -324,8 +319,11 @@ describe('Fuzz: parser.parse() - Input Mutation', () => {
 
     for (const input of edgeCases) {
       const result = parser.parse(input)
-      expect(result).toBeDefined()
-      expect(typeof result.type).toBe('string')
+      // All empty/whitespace inputs should produce parse_error with 'Empty input'
+      expect(result.type).toBe('parse_error')
+      if (result.type === 'parse_error') {
+        expect(result.message).toBe('Empty input')
+      }
     }
   })
 
@@ -340,7 +338,8 @@ describe('Fuzz: parser.parse() - Input Mutation', () => {
       const result = parser.parse(input)
       const elapsed = Date.now() - start
 
-      expect(result).toBeDefined()
+      // A repeated 'a' is not a known verb, so it should be unknown_verb
+      expect(result.type).toBe('unknown_verb')
       expect(elapsed).toBeLessThan(1000) // Should complete within 1 second
     }
   })
@@ -349,12 +348,13 @@ describe('Fuzz: parser.parse() - Input Mutation', () => {
     const resolver = () => []
     const parser = createParser({ resolver })
 
-    fuzzLoop((random) => {
+    const result = fuzzLoop((random) => {
       const char = String.fromCharCode(Math.floor(random() * 128))
-      const result = parser.parse(char)
-      expect(result).toBeDefined()
-      expect(typeof result.type).toBe('string')
+      const parseResult = parser.parse(char)
+      expect(['command', 'ambiguous', 'unknown_verb', 'unknown_noun', 'parse_error']).toContain(parseResult.type)
     })
+
+    expect(result.iterations).toBeGreaterThan(0)
   })
 
   it('handles unicode edge cases', () => {
@@ -372,8 +372,11 @@ describe('Fuzz: parser.parse() - Input Mutation', () => {
 
     for (const input of unicodeTests) {
       const result = parser.parse(input)
-      expect(result).toBeDefined()
-      expect(typeof result.type).toBe('string')
+      // All unicode nouns resolve to test entity since resolver always returns one
+      expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.raw).toBe(input)
+      }
     }
   })
 
@@ -381,12 +384,13 @@ describe('Fuzz: parser.parse() - Input Mutation', () => {
     const resolver = () => []
     const parser = createParser({ resolver })
 
-    fuzzLoop((random) => {
+    const result = fuzzLoop((random) => {
       const input = generateControlCharString(random, 50)
-      const result = parser.parse(input)
-      expect(result).toBeDefined()
-      expect(typeof result.type).toBe('string')
+      const parseResult = parser.parse(input)
+      expect(['command', 'ambiguous', 'unknown_verb', 'unknown_noun', 'parse_error']).toContain(parseResult.type)
     })
+
+    expect(result.iterations).toBeGreaterThan(0)
   })
 
   it('handles repeated words attack', () => {
@@ -398,7 +402,8 @@ describe('Fuzz: parser.parse() - Input Mutation', () => {
     const result = parser.parse(input)
     const elapsed = Date.now() - start
 
-    expect(result).toBeDefined()
+    // Should produce a result with a recognized verb
+    expect(result.type).toBe('command')
     expect(elapsed).toBeLessThan(100) // Should be fast even with repetition
   })
 
@@ -412,7 +417,12 @@ describe('Fuzz: parser.parse() - Input Mutation', () => {
     const result = parser.parse(input)
     const elapsed = Date.now() - start
 
-    expect(result).toBeDefined()
+    // Should successfully parse with the verb GET and the noun 'lamp'
+    expect(result.type).toBe('command')
+    if (result.type === 'command') {
+      expect(result.command.verb).toBe('GET')
+      expect(result.command.subject?.noun).toBe('lamp')
+    }
     expect(elapsed).toBeLessThan(100)
   })
 
@@ -430,8 +440,8 @@ describe('Fuzz: parser.parse() - Input Mutation', () => {
 
     for (const input of injections) {
       const result = parser.parse(input)
-      expect(result).toBeDefined()
-      expect(typeof result.type).toBe('string')
+      // Injection strings should be parsed normally, not cause crashes
+      expect(['command', 'ambiguous', 'unknown_verb', 'unknown_noun', 'parse_error']).toContain(result.type)
     }
   })
 
@@ -453,8 +463,8 @@ describe('Fuzz: parser.parse() - Input Mutation', () => {
 
     for (const input of quoteTests) {
       const result = parser.parse(input)
-      expect(result).toBeDefined()
-      expect(typeof result.type).toBe('string')
+      // Quote edge cases should produce valid parse result types
+      expect(['command', 'ambiguous', 'unknown_verb', 'unknown_noun', 'parse_error']).toContain(result.type)
     }
   })
 
@@ -471,8 +481,12 @@ describe('Fuzz: parser.parse() - Input Mutation', () => {
 
     for (const input of whitespaceTests) {
       const result = parser.parse(input)
-      expect(result).toBeDefined()
-      expect(typeof result.type).toBe('string')
+      // All whitespace variations of 'get lamp' should parse as command
+      expect(result.type).toBe('command')
+      if (result.type === 'command') {
+        expect(result.command.verb).toBe('GET')
+        expect(result.command.subject?.id).toBe('lamp-1')
+      }
     }
   })
 
@@ -480,12 +494,14 @@ describe('Fuzz: parser.parse() - Input Mutation', () => {
     const resolver = () => []
     const parser = createParser({ resolver })
 
-    fuzzLoop((random) => {
+    const result = fuzzLoop((random) => {
       const input = generateWord(random, 10)
-      const result = parser.parse(input)
-      expect(result).toBeDefined()
-      expect(typeof result.type).toBe('string')
+      const parseResult = parser.parse(input)
+      // Random words should either be unknown verbs, directions, or partial matches
+      expect(['command', 'ambiguous', 'unknown_verb', 'unknown_noun', 'parse_error']).toContain(parseResult.type)
     })
+
+    expect(result.iterations).toBeGreaterThan(0)
   })
 
   it('handles case variations', () => {
@@ -518,8 +534,11 @@ describe('Fuzz: parser.parse() - Input Mutation', () => {
 
     for (const scope of scopeTests) {
       const result = parser.parse('get lamp', scope as any)
-      expect(result).toBeDefined()
-      expect(typeof result.type).toBe('string')
+      // Resolver returns empty, so 'get lamp' should be unknown_noun
+      expect(result.type).toBe('unknown_noun')
+      if (result.type === 'unknown_noun') {
+        expect(result.noun).toBe('lamp')
+      }
     }
   })
 
@@ -533,7 +552,11 @@ describe('Fuzz: parser.parse() - Input Mutation', () => {
     }
 
     const result = parser.parse('get lamp', largeScope as any)
-    expect(result).toBeDefined()
+    // Resolver returns empty, so 'get lamp' should be unknown_noun
+    expect(result.type).toBe('unknown_noun')
+    if (result.type === 'unknown_noun') {
+      expect(result.noun).toBe('lamp')
+    }
   })
 })
 
@@ -594,11 +617,14 @@ describe('Fuzz: addVerb() and addDirection()', () => {
         parser.addVerb(def)
         // If it doesn't throw, parser should still work
         const result = parser.parse('look')
-        expect(result).toBeDefined()
-      } catch {
-        // It's ok if it throws, just shouldn't crash completely
-        // Parser creation should still work
-        expect(true).toBe(true)
+        expect(result.type).toBe('command')
+        if (result.type === 'command') {
+          expect(result.command.verb).toBe('LOOK')
+        }
+      } catch (error) {
+        // It's ok if it throws - verify the error has a message
+        expect(error).toBeInstanceOf(TypeError)
+        expect((error as TypeError).message).toMatch(/.+/)
       }
     }
   })
@@ -620,10 +646,14 @@ describe('Fuzz: addVerb() and addDirection()', () => {
         parser.addDirection(def)
         // If it doesn't throw, parser should still work
         const result = parser.parse('north')
-        expect(result).toBeDefined()
-      } catch {
-        // It's ok if it throws
-        expect(true).toBe(true)
+        expect(result.type).toBe('command')
+        if (result.type === 'command') {
+          expect(result.command.direction).toBe('NORTH')
+        }
+      } catch (error) {
+        // It's ok if it throws - verify the error has a message
+        expect(error).toBeInstanceOf(TypeError)
+        expect((error as TypeError).message).toMatch(/.+/)
       }
     }
   })
@@ -689,10 +719,10 @@ describe('Fuzz: addVerb() and addDirection()', () => {
 
 describe('Fuzz: createParser() - Configuration', () => {
   it('requires resolver function', () => {
-    expect(() => createParser({} as any)).toThrow()
-    expect(() => createParser({ resolver: 'not a function' } as any)).toThrow()
-    expect(() => createParser({ resolver: 123 } as any)).toThrow()
-    expect(() => createParser({ resolver: null } as any)).toThrow()
+    expect(() => createParser({} as any)).toThrow(/Resolver must be a function/)
+    expect(() => createParser({ resolver: 'not a function' } as any)).toThrow(/Resolver must be a function/)
+    expect(() => createParser({ resolver: 123 } as any)).toThrow(/Resolver must be a function/)
+    expect(() => createParser({ resolver: null } as any)).toThrow(/Resolver must be a function/)
   })
 
   it('handles resolver that returns invalid values', () => {
@@ -707,8 +737,11 @@ describe('Fuzz: createParser() - Configuration', () => {
     for (const resolver of invalidResolvers) {
       const parser = createParser({ resolver })
       const result = parser.parse('get lamp')
-      expect(result).toBeDefined()
-      expect(typeof result.type).toBe('string')
+      // Invalid resolver returns should produce unknown_noun since they can't resolve entities
+      expect(result.type).toBe('unknown_noun')
+      if (result.type === 'unknown_noun') {
+        expect(result.noun).toBe('lamp')
+      }
     }
   })
 
@@ -716,8 +749,8 @@ describe('Fuzz: createParser() - Configuration', () => {
     const resolver = () => [{ name: 'test' }] as any
     const parser = createParser({ resolver })
     const result = parser.parse('get lamp')
-    expect(result).toBeDefined()
-    expect(typeof result.type).toBe('string')
+    // Entity without id should still resolve as command since array has length 1
+    expect(result.type).toBe('command')
   })
 
   it('handles resolver that throws', () => {
@@ -726,8 +759,11 @@ describe('Fuzz: createParser() - Configuration', () => {
     }
     const parser = createParser({ resolver })
     const result = parser.parse('get lamp')
-    expect(result).toBeDefined()
-    expect(typeof result.type).toBe('string')
+    // Resolver throwing should produce unknown_noun since entities can't be resolved
+    expect(result.type).toBe('unknown_noun')
+    if (result.type === 'unknown_noun') {
+      expect(result.noun).toBe('lamp')
+    }
   })
 
   it('handles very large resolver returns', () => {
@@ -736,9 +772,12 @@ describe('Fuzz: createParser() - Configuration', () => {
     }
     const parser = createParser({ resolver })
     const result = parser.parse('get lamp')
-    expect(result).toBeDefined()
+    // 1000 entities should produce ambiguous result
+    expect(result.type).toBe('ambiguous')
     if (result.type === 'ambiguous') {
-      expect(result.candidates.length).toBeGreaterThan(0)
+      expect(result.candidates).toHaveLength(1000)
+      expect(result.candidates[0]!.id).toBe('item-0')
+      expect(result.candidates[999]!.id).toBe('item-999')
     }
   })
 })
@@ -753,8 +792,8 @@ describe('Fuzz: Resolver Function Callback', () => {
     const parser = createParser({ resolver })
     const result = parser.parse('get lamp')
 
-    expect(result).toBeDefined()
-    expect(typeof result.type).toBe('string')
+    // Array of non-objects with length > 1 should produce ambiguous result
+    expect(result.type).toBe('ambiguous')
   })
 
   it('handles resolver returning undefined', () => {
@@ -762,7 +801,11 @@ describe('Fuzz: Resolver Function Callback', () => {
     const parser = createParser({ resolver })
     const result = parser.parse('get lamp')
 
-    expect(result).toBeDefined()
+    // Undefined is not an array, so it should produce unknown_noun
+    expect(result.type).toBe('unknown_noun')
+    if (result.type === 'unknown_noun') {
+      expect(result.noun).toBe('lamp')
+    }
   })
 
   it('handles resolver returning null', () => {
@@ -770,7 +813,11 @@ describe('Fuzz: Resolver Function Callback', () => {
     const parser = createParser({ resolver })
     const result = parser.parse('get lamp')
 
-    expect(result).toBeDefined()
+    // Null is not an array, so it should produce unknown_noun
+    expect(result.type).toBe('unknown_noun')
+    if (result.type === 'unknown_noun') {
+      expect(result.noun).toBe('lamp')
+    }
   })
 
   it('handles resolver returning non-array values', () => {
@@ -784,7 +831,11 @@ describe('Fuzz: Resolver Function Callback', () => {
     for (const resolver of nonArrayResolvers) {
       const parser = createParser({ resolver })
       const result = parser.parse('get lamp')
-      expect(result).toBeDefined()
+      // Non-array return values should produce unknown_noun
+      expect(result.type).toBe('unknown_noun')
+      if (result.type === 'unknown_noun') {
+        expect(result.noun).toBe('lamp')
+      }
     }
   })
 
@@ -793,7 +844,8 @@ describe('Fuzz: Resolver Function Callback', () => {
     const parser = createParser({ resolver })
     const result = parser.parse('get lamp')
 
-    expect(result).toBeDefined()
+    // 3 items in array should be treated as ambiguous
+    expect(result.type).toBe('ambiguous')
   })
 
   it('handles resolver with entities missing id field', () => {
@@ -801,7 +853,8 @@ describe('Fuzz: Resolver Function Callback', () => {
     const parser = createParser({ resolver })
     const result = parser.parse('get lamp')
 
-    expect(result).toBeDefined()
+    // Single entity (even without id) should still produce command result
+    expect(result.type).toBe('command')
   })
 
   it('handles resolver with non-string id values', () => {
@@ -809,7 +862,8 @@ describe('Fuzz: Resolver Function Callback', () => {
     const parser = createParser({ resolver })
     const result = parser.parse('get lamp')
 
-    expect(result).toBeDefined()
+    // 3 entities should produce ambiguous result
+    expect(result.type).toBe('ambiguous')
   })
 
   it('handles resolver returning very large arrays', () => {
@@ -820,7 +874,13 @@ describe('Fuzz: Resolver Function Callback', () => {
     const result = parser.parse('get lamp')
     const elapsed = Date.now() - start
 
-    expect(result).toBeDefined()
+    // 10000 entities should produce ambiguous result
+    expect(result.type).toBe('ambiguous')
+    if (result.type === 'ambiguous') {
+      expect(result.candidates).toHaveLength(10000)
+      expect(result.candidates[0]!.id).toBe('item-0')
+      expect(result.candidates[9999]!.id).toBe('item-9999')
+    }
     expect(elapsed).toBeLessThan(1000)
   })
 
@@ -843,7 +903,11 @@ describe('Fuzz: Resolver Function Callback', () => {
     for (const resolver of errorTypes) {
       const parser = createParser({ resolver })
       const result = parser.parse('get lamp')
-      expect(result).toBeDefined()
+      // Throwing resolvers should produce unknown_noun since entities can't be resolved
+      expect(result.type).toBe('unknown_noun')
+      if (result.type === 'unknown_noun') {
+        expect(result.noun).toBe('lamp')
+      }
     }
   })
 
@@ -856,12 +920,12 @@ describe('Fuzz: Resolver Function Callback', () => {
     const parser = createParser({ resolver })
     const scope = { room: 'test-room' }
 
-    parser.parse('get red lamp', scope as any)
+    parser.parse('get red lamp', { scope })
 
-    expect(callArgs.length).toBe(3)
-    expect(typeof callArgs[0]).toBe('string') // noun
-    expect(Array.isArray(callArgs[1])).toBe(true) // adjectives
-    expect(typeof callArgs[2]).toBe('object') // scope
+    expect(callArgs).toHaveLength(3)
+    expect(callArgs[0]).toBe('lamp') // noun
+    expect(callArgs[1]).toEqual(['red']) // adjectives
+    expect(callArgs[2]).toEqual(scope) // scope passed through
   })
 
   it('handles resolver with random return values', () => {
@@ -898,36 +962,39 @@ describe('Fuzz: Property-Based Tests', () => {
     const resolver = () => [{ id: 'test-1' }]
     const parser = createParser({ resolver })
 
-    fuzzLoop((random) => {
+    // Verify determinism: same input produces identical output
+    const result = fuzzLoop((random) => {
       const input = generateCommand(random)
       const result1 = parser.parse(input)
       const result2 = parser.parse(input)
 
       expect(result1).toEqual(result2)
     })
+
+    expect(result.iterations).toBeGreaterThan(0)
   })
 
   it('parse() never mutates input string', () => {
     const resolver = () => [{ id: 'test-1' }]
     const parser = createParser({ resolver })
 
-    fuzzLoop((random) => {
+    const result = fuzzLoop((random) => {
       const input = generateCommand(random)
       const inputCopy = String(input)
 
       parser.parse(input)
 
-      if (input !== inputCopy) {
-        throw new Error(`Input was mutated: "${inputCopy}" -> "${input}"`)
-      }
+      expect(input).toBe(inputCopy)
     })
+
+    expect(result.iterations).toBeGreaterThan(0)
   })
 
   it('parse() never mutates options object', () => {
     const resolver = () => [{ id: 'test-1' }]
     const parser = createParser({ resolver })
 
-    fuzzLoop((random) => {
+    const result = fuzzLoop((random) => {
       const options = { room: 'test-room' }
       const optionsCopy = JSON.parse(JSON.stringify(options))
 
@@ -935,6 +1002,8 @@ describe('Fuzz: Property-Based Tests', () => {
 
       expect(options).toEqual(optionsCopy)
     })
+
+    expect(result.iterations).toBeGreaterThan(0)
   })
 
   it('pronoun reference tracking works correctly', () => {
@@ -970,7 +1039,10 @@ describe('Fuzz: Property-Based Tests', () => {
 
     expect(result.type).toBe('ambiguous')
     if (result.type === 'ambiguous') {
-      expect(result.candidates.length).toBe(2)
+      expect(result.candidates).toHaveLength(2)
+      expect(result.candidates[0]!.id).toBe('1')
+      expect(result.candidates[1]!.id).toBe('2')
+      expect(result.original).toBe('ball')
     }
   })
 
@@ -1002,7 +1074,12 @@ describe('Fuzz: Boundary Exploration', () => {
       const result = parser.parse(input)
       const elapsed = Date.now() - start
 
-      expect(result).toBeDefined()
+      if (len === 0) {
+        expect(result.type).toBe('parse_error')
+      } else {
+        // 'a' repeated is not a known verb, so it should be unknown_verb or parse_error
+        expect(['unknown_verb', 'parse_error', 'command']).toContain(result.type)
+      }
       expect(elapsed).toBeLessThan(1000)
     }
   })
@@ -1033,7 +1110,7 @@ describe('Fuzz: Boundary Exploration', () => {
     // Parse 1000 times to check for memory leaks
     for (let i = 0; i < 1000; i++) {
       const result = parser.parse('get lamp')
-      expect(result).toBeDefined()
+      expect(result.type).toBe('command')
     }
   })
 })
@@ -1047,7 +1124,7 @@ describe('Fuzz: State Machine Fuzzing', () => {
     const resolver = () => [{ id: 'test' }]
     const parser = createParser({ resolver })
 
-    fuzzLoop((random) => {
+    const result = fuzzLoop((random) => {
       const action = Math.floor(random() * 3)
 
       switch (action) {
@@ -1065,11 +1142,15 @@ describe('Fuzz: State Machine Fuzzing', () => {
           break
       }
 
-      // Parser should remain functional
-      const result = parser.parse('look')
-      expect(result).toBeDefined()
-      expect(typeof result.type).toBe('string')
+      // Parser should remain functional - 'look' is a no-args verb
+      const lookResult = parser.parse('look')
+      expect(lookResult.type).toBe('command')
+      if (lookResult.type === 'command') {
+        expect(lookResult.command.verb).toBe('LOOK')
+      }
     })
+
+    expect(result.iterations).toBeGreaterThan(0)
   })
 
   it('handles interleaved operations correctly', () => {
@@ -1078,7 +1159,10 @@ describe('Fuzz: State Machine Fuzzing', () => {
 
     // Parse with subject
     const r1 = parser.parse('get lamp')
-    expect(r1).toBeDefined()
+    expect(r1.type).toBe('command')
+    if (r1.type === 'command') {
+      expect(r1.command.subject?.id).toBe('lamp-1')
+    }
 
     // Use "it" - should work
     const r2 = parser.parse('examine it')
@@ -1144,16 +1228,17 @@ describe('Fuzz: Performance and Resource Testing', () => {
     const resolver = () => [{ id: 'test' }]
     const parser = createParser({ resolver })
 
-    fuzzLoop((random) => {
+    const result = fuzzLoop((random) => {
       const input = generateCommand(random)
       const start = Date.now()
-      parser.parse(input)
+      const parseResult = parser.parse(input)
       const elapsed = Date.now() - start
 
-      if (elapsed > 10) {
-        throw new Error(`Parse took ${elapsed}ms for: ${input}`)
-      }
+      expect(['command', 'ambiguous', 'unknown_verb', 'unknown_noun', 'parse_error']).toContain(parseResult.type)
+      expect(elapsed).toBeLessThan(10)
     })
+
+    expect(result.iterations).toBeGreaterThan(0)
   })
 })
 
@@ -1166,45 +1251,51 @@ describe('Fuzz: Universal Invariants', () => {
     const resolver = () => [{ id: 'test' }]
     const parser = createParser({ resolver })
 
-    fuzzLoop((random) => {
+    const result = fuzzLoop((random) => {
       const input = generateCommand(random)
-      const result = parser.parse(input)
+      const parseResult = parser.parse(input)
 
-      expect(result).toBeDefined()
-      expect(typeof result.type).toBe('string')
-      expect(['command', 'ambiguous', 'unknown_verb', 'unknown_noun', 'parse_error']).toContain(result.type)
+      expect(['command', 'ambiguous', 'unknown_verb', 'unknown_noun', 'parse_error']).toContain(parseResult.type)
     })
+
+    expect(result.iterations).toBeGreaterThan(0)
   })
 
   it('command results have required properties', () => {
     const resolver = () => [{ id: 'test' }]
     const parser = createParser({ resolver })
 
-    fuzzLoop((random) => {
+    let commandCount = 0
+    const result = fuzzLoop((random) => {
       const input = generateCommand(random)
-      const result = parser.parse(input)
+      const parseResult = parser.parse(input)
 
-      if (result.type === 'command') {
-        expect(typeof result.command.verb).toBe('string')
-        expect(result.command.verb).toBe(result.command.verb.toUpperCase())
-        expect(typeof result.command.raw).toBe('string')
-        expect(result.command.raw).toBe(input)
+      if (parseResult.type === 'command') {
+        commandCount++
+        expect(parseResult.command.verb).toBe(parseResult.command.verb.toUpperCase())
+        expect(parseResult.command.raw).toBe(input)
       }
     })
+
+    expect(result.iterations).toBeGreaterThan(0)
+    // At least some inputs should produce commands
+    expect(commandCount).toBeGreaterThan(0)
   })
 
   it('EntityRef objects have required properties', () => {
     const resolver = () => [{ id: 'test-id' }]
     const parser = createParser({ resolver })
 
-    const result = parser.parse('get lamp')
+    const result = parser.parse('get shiny brass lamp')
 
-    if (result.type === 'command' && result.command.subject) {
+    expect(result.type).toBe('command')
+    if (result.type === 'command') {
       const entity = result.command.subject
-      expect(typeof entity.id).toBe('string')
-      expect(entity.id.length).toBeGreaterThan(0)
-      expect(typeof entity.noun).toBe('string')
-      expect(Array.isArray(entity.adjectives)).toBe(true)
+      expect(entity?.id).toBe('test-id')
+      expect(entity?.noun).toBe('lamp')
+      expect(entity?.adjectives).toEqual(['shiny', 'brass'])
+      expect(entity?.adjectives[0]).toBe('shiny')
+      expect(entity?.adjectives[1]).toBe('brass')
     }
   })
 
@@ -1212,23 +1303,28 @@ describe('Fuzz: Universal Invariants', () => {
     const resolver = () => []
     const parser = createParser({ resolver })
 
-    fuzzLoop((random) => {
+    let positionCheckCount = 0
+    const result = fuzzLoop((random) => {
       const input = generateCommand(random)
-      const result = parser.parse(input)
+      const parseResult = parser.parse(input)
 
-      if (result.type === 'unknown_noun' || result.type === 'parse_error') {
-        expect(typeof result.position).toBe('number')
-        expect(result.position).toBeGreaterThanOrEqual(0)
-        expect(result.position).toBeLessThanOrEqual(input.length)
+      if (parseResult.type === 'unknown_noun' || parseResult.type === 'parse_error') {
+        positionCheckCount++
+        expect(parseResult.position).toBeGreaterThanOrEqual(0)
+        expect(parseResult.position).toBeLessThanOrEqual(input.length)
       }
     })
+
+    expect(result.iterations).toBeGreaterThan(0)
+    // With empty resolver, most inputs should produce unknown_noun or parse_error
+    expect(positionCheckCount).toBeGreaterThan(0)
   })
 
   it('never throws on any input', () => {
     const resolver = () => [{ id: 'test' }]
     const parser = createParser({ resolver })
 
-    fuzzLoop((random) => {
+    const result = fuzzLoop((random) => {
       const edgeCase = Math.floor(random() * 6)
       let input: string
 
@@ -1252,9 +1348,11 @@ describe('Fuzz: Universal Invariants', () => {
           input = generateString(random, 500)
       }
 
-      // Should never throw
-      const result = parser.parse(input)
-      expect(result).toBeDefined()
+      // Should never throw, always return a valid parse result type
+      const parseResult = parser.parse(input)
+      expect(['command', 'ambiguous', 'unknown_verb', 'unknown_noun', 'parse_error']).toContain(parseResult.type)
     })
+
+    expect(result.iterations).toBeGreaterThan(0)
   })
 })

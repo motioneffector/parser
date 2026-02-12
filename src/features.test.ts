@@ -133,6 +133,8 @@ describe('Disambiguation', () => {
       expect(result.type).toBe('ambiguous')
       if (result.type === 'ambiguous') {
         expect(result.candidates).toHaveLength(2)
+        expect(result.candidates[0]!.id).toBe('ball-red')
+        expect(result.candidates[1]!.id).toBe('ball-blue')
       }
     })
 
@@ -162,15 +164,8 @@ describe('Disambiguation', () => {
       if (result.type === 'ambiguous') {
         // Candidates array has indices 0 and 1 that can be used for disambiguation
         expect(result.candidates).toHaveLength(2)
-        expect(result.candidates[0]).toBeDefined()
-        expect(result.candidates[0]!.id).toBeDefined()
-        expect(result.candidates[1]).toBeDefined()
-        expect(result.candidates[1]!.id).toBeDefined()
-        // Verify indices are accessible
-        const firstCandidate = result.candidates[0]
-        const secondCandidate = result.candidates[1]
-        expect(firstCandidate?.id).toBe('item-a')
-        expect(secondCandidate?.id).toBe('item-b')
+        expect(result.candidates[0]!.id).toBe('item-a')
+        expect(result.candidates[1]!.id).toBe('item-b')
       }
     })
 
@@ -182,11 +177,9 @@ describe('Disambiguation', () => {
       expect(result.type).toBe('ambiguous')
       if (result.type === 'ambiguous') {
         // Each candidate has an id that can be used for disambiguation
+        expect(result.candidates).toHaveLength(2)
         expect(result.candidates[0]!.id).toBe('item-a')
         expect(result.candidates[1]!.id).toBe('item-b')
-        // Verify id property is a string (usable for lookup)
-        expect(typeof result.candidates[0]!.id).toBe('string')
-        expect(typeof result.candidates[1]!.id).toBe('string')
       }
     })
   })
@@ -320,7 +313,9 @@ describe('Custom Vocabulary', () => {
       expect(result.type).toBe('command')
       if (result.type === 'command') {
         expect(result.command.verb).toBe('MEDITATE')
-        expect(result.command.subject).toBeUndefined()
+        expect(result.command.raw).toBe('meditate')
+        // 'none' pattern means the command has no subject, object, or preposition
+        expect(Object.keys(result.command).sort()).toEqual(['raw', 'verb'])
       }
     })
   })
@@ -467,10 +462,6 @@ describe('Error Handling', () => {
       const result = parser.parse('get')
       expect(result.type).toBe('parse_error')
       if (result.type === 'parse_error') {
-        expect(result.message).toBeTruthy()
-        expect(typeof result.message).toBe('string')
-        expect(result.message.length).toBeGreaterThan(0)
-        // Should contain useful context about the error
         expect(result.message).toMatch(/expected|object|after/i)
       }
     })
@@ -683,24 +674,24 @@ describe('Parse Result Types', () => {
     })
 
     it('has subject property when applicable', () => {
-      const result = parser.parse('get lamp')
+      const result = parser.parse('get old lamp')
       expect(result.type).toBe('command')
       if (result.type === 'command') {
-        expect(result.command.subject).toBeDefined()
         expect(result.command.subject?.id).toBe('test-1')
         expect(result.command.subject?.noun).toBe('lamp')
-        expect(result.command.subject?.adjectives).toEqual([])
+        expect(result.command.subject?.adjectives).toEqual(['old'])
+        expect(result.command.subject?.adjectives[0]).toBe('old')
       }
     })
 
     it('has object property when applicable', () => {
-      const result = parser.parse('put lamp in box')
+      const result = parser.parse('put lamp in big box')
       expect(result.type).toBe('command')
       if (result.type === 'command') {
-        expect(result.command.object).toBeDefined()
         expect(result.command.object?.id).toBe('test-1')
         expect(result.command.object?.noun).toBe('box')
-        expect(result.command.object?.adjectives).toEqual([])
+        expect(result.command.object?.adjectives).toEqual(['big'])
+        expect(result.command.object?.adjectives[0]).toBe('big')
       }
     })
 
@@ -751,9 +742,8 @@ describe('Parse Result Types', () => {
       const result = parser.parse('get red lamp')
       expect(result.type).toBe('command')
       if (result.type === 'command') {
-        expect(result.command.subject?.adjectives).toBeDefined()
-        expect(Array.isArray(result.command.subject?.adjectives)).toBe(true)
         expect(result.command.subject?.adjectives).toEqual(['red'])
+        expect(result.command.subject?.adjectives[0]).toBe('red')
       }
     })
   })
@@ -771,7 +761,9 @@ describe('Parse Result Types', () => {
       const result = ambigParser.parse('get item')
       expect(result.type).toBe('ambiguous')
       if (result.type === 'ambiguous') {
-        expect(Array.isArray(result.candidates)).toBe(true)
+        expect(result.candidates).toHaveLength(2)
+        expect(result.candidates[0]!.id).toBe('a')
+        expect(result.candidates[1]!.id).toBe('b')
       }
     })
 
@@ -820,7 +812,7 @@ describe('Parse Result Types', () => {
       const result = emptyParser.parse('get blerg')
       expect(result.type).toBe('unknown_noun')
       if (result.type === 'unknown_noun') {
-        expect(typeof result.position).toBe('number')
+        expect(result.position).toBe(4)
       }
     })
   })
@@ -835,7 +827,7 @@ describe('Parse Result Types', () => {
       const result = parser.parse('')
       expect(result.type).toBe('parse_error')
       if (result.type === 'parse_error') {
-        expect(typeof result.message).toBe('string')
+        expect(result.message).toBe('Empty input')
       }
     })
 
@@ -843,7 +835,7 @@ describe('Parse Result Types', () => {
       const result = parser.parse('')
       expect(result.type).toBe('parse_error')
       if (result.type === 'parse_error') {
-        expect(typeof result.position).toBe('number')
+        expect(result.position).toBe(0)
       }
     })
   })
